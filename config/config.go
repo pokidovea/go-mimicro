@@ -17,13 +17,13 @@ func Load(configPath string) (*MockServerCollection, error) {
 		return nil, err
 	}
 
-	var server_collection MockServerCollection
+	var serverCollection MockServerCollection
 
-	err = yaml.Unmarshal(data, &server_collection)
+	err = yaml.Unmarshal(data, &serverCollection)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &server_collection, nil
+	return &serverCollection, nil
 }

@@ -18,7 +18,7 @@ type MockServer struct {
 	Endpoints []Endpoint `json:"endpoints"`
 }
 
-func (mockServer MockServer) Serve() {
+func (mockServer MockServer) Serve(done chan bool) {
 	mux := http.NewServeMux()
 
 	for _, endpoint := range mockServer.Endpoints {
@@ -37,4 +37,7 @@ func (mockServer MockServer) Serve() {
 	}
 
 	s.ListenAndServe()
+
+	done <- true
+
 }

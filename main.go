@@ -10,10 +10,16 @@ func main() {
 	configPath := flag.String("config", "", "a path to configuration file")
 	flag.Parse()
 
-	servers, err := config.Load(*configPath)
+	serverCollection, err := config.Load(*configPath)
 
 	if err != nil {
 		panic(err)
 	}
-	servers.Servers[0].Serve()
+
+	done := make(chan bool, len(serverCollection.Servers))
+	for _, server := range serverCollection.Servers {
+		go server.Serve(done)
+	}
+
+	<-done
 }
