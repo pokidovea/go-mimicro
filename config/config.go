@@ -2,32 +2,22 @@ package config
 
 import (
 	"github.com/ghodss/yaml"
+	"github.com/pokidovea/mimicro/mock_server"
 	"io/ioutil"
 )
 
-type Endpoint struct {
-	Url      string `json:"url"`
-	Response string `json:"response"`
+type MockServerCollection struct {
+	Servers []mock_server.MockServer `json:"servers"`
 }
 
-type Server struct {
-	Name      string     `json:"name"`
-	Port      int        `json:"port"`
-	Endpoints []Endpoint `json:"endpoints"`
-}
-
-type ServerCollection struct {
-	Servers []Server `json:"servers"`
-}
-
-func Load(configPath string) (*ServerCollection, error) {
+func Load(configPath string) (*MockServerCollection, error) {
 	data, err := ioutil.ReadFile(configPath)
 
 	if err != nil {
 		return nil, err
 	}
 
-	var server_collection ServerCollection
+	var server_collection MockServerCollection
 
 	err = yaml.Unmarshal(data, &server_collection)
 
