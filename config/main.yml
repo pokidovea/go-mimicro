@@ -3,11 +3,10 @@ servers:
       port: 4573
       endpoints:
         - url: /simple_url
-          response: server_1_simple_response.json
-        - url: /with/{var}
-          response: server_1_response_with_var.json
-    # - name: server_2
-    #   port: 4574
-    #   endpoints:
-    #     - url: /response_by_schema
-    #       schema: server_2_schema.json
+          GET:
+            response: '{"a": 1}'
+            content_type: application/json
+          POST:
+            response: "OK"
+            content_type: text/plain
+
