@@ -1,12 +1,16 @@
 package main
 
 import (
+	"flag"
 	"github.com/pokidovea/mimicro/config"
 )
 
 func main() {
 
-	servers, err := config.Load("/home/pokidovea/Dropbox/projects/go/src/github.com/pokidovea/mimicro/config/main.yml")
+	configPath := flag.String("config", "", "a path to configuration file")
+	flag.Parse()
+
+	servers, err := config.Load(*configPath)
 
 	if err != nil {
 		panic(err)

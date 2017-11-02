@@ -22,8 +22,9 @@ func (mockServer MockServer) Serve() {
 	mux := http.NewServeMux()
 
 	for _, endpoint := range mockServer.Endpoints {
+		response := endpoint.Response
 		mux.HandleFunc(endpoint.Url, func(w http.ResponseWriter, req *http.Request) {
-			fmt.Fprintf(w, endpoint.Response)
+			fmt.Fprintf(w, response)
 		})
 	}
 
