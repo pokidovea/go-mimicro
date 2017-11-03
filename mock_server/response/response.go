@@ -12,8 +12,17 @@ type Response struct {
 }
 
 func (response Response) WriteResponse(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", response.ContentType)
-	w.WriteHeader(http.StatusOK)
+	if response.ContentType == "" {
+		w.Header().Set("Content-Type", "text/plain")
+	} else {
+		w.Header().Set("Content-Type", response.ContentType)
+	}
+
+	if response.StatusCode == 0 {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(response.StatusCode)
+	}
 
 	fmt.Fprintf(w, response.Body)
 }
