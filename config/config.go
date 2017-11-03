@@ -10,6 +10,18 @@ type MockServerCollection struct {
 	Servers []mock_server.MockServer `json:"servers"`
 }
 
+func parseConfig(data []byte) (*MockServerCollection, error) {
+	var serverCollection MockServerCollection
+
+	err := yaml.Unmarshal(data, &serverCollection)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &serverCollection, nil
+}
+
 func Load(configPath string) (*MockServerCollection, error) {
 	data, err := ioutil.ReadFile(configPath)
 
@@ -17,13 +29,5 @@ func Load(configPath string) (*MockServerCollection, error) {
 		return nil, err
 	}
 
-	var serverCollection MockServerCollection
-
-	err = yaml.Unmarshal(data, &serverCollection)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &serverCollection, nil
+	return parseConfig(data)
 }

@@ -1,6 +1,7 @@
 package response
 
 import (
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -16,17 +17,9 @@ func TestResponseHasOnlyBody(t *testing.T) {
 	resp := w.Result()
 	body, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.Header.Get("Content-Type") != "text/plain" {
-		t.Errorf("Expected content type to be 'text/plain', but was '%v'", resp.Header.Get("Content-Type"))
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected code to be %v, but was %v", http.StatusOK, resp.StatusCode)
-	}
-
-	if string(body) != "OK" {
-		t.Errorf("Expected body to be %v, but was %v", "OK", string(body))
-	}
+	assert.Equal(t, resp.Header.Get("Content-Type"), "text/plain")
+	assert.Equal(t, resp.StatusCode, http.StatusOK)
+	assert.Equal(t, string(body), "OK")
 }
 
 func TestAllFieldsAreDefined(t *testing.T) {
@@ -38,15 +31,7 @@ func TestAllFieldsAreDefined(t *testing.T) {
 	resp := w.Result()
 	body, _ := ioutil.ReadAll(resp.Body)
 
-	if resp.Header.Get("Content-Type") != "application/json" {
-		t.Errorf("Expected content type to be 'application/json', but was '%v'", resp.Header.Get("Content-Type"))
-	}
-
-	if resp.StatusCode != http.StatusCreated {
-		t.Errorf("Expected code to be %v, but was %v", http.StatusCreated, resp.StatusCode)
-	}
-
-	if string(body) != "{\"a\":1}" {
-		t.Errorf("Expected body to be %v, but was %v", "{\"a\":1}", string(body))
-	}
+	assert.Equal(t, resp.Header.Get("Content-Type"), "application/json")
+	assert.Equal(t, resp.StatusCode, http.StatusCreated)
+	assert.Equal(t, string(body), "{\"a\":1}")
 }
