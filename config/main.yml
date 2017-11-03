@@ -4,9 +4,10 @@ servers:
       endpoints:
         - url: /simple_url
           GET:
-            response: '{"a": 1}'
+            body: '{"a": 1}'
             content_type: application/json
           POST:
-            response: "OK"
+            body: "OK"
             content_type: text/plain
+            status_code: 201
 
