@@ -1,7 +1,6 @@
 package response
 
 import (
-	// "errors"
 	"encoding/json"
 	"fmt"
 	"net/http"
