@@ -3,8 +3,13 @@ package response
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"regexp"
+	"strings"
 )
+
+const FILE_PATH_REGEXP = `^file:\/\/[\/\w\.]*$`
 
 type Response struct {
 	Body        string `json:"body"`
@@ -21,7 +26,11 @@ func (response *Response) UnmarshalJSON(data []byte) error {
 
 	m := f.(map[string]interface{})
 
-	response.Body = m["body"].(string)
+	body, err := processBody(m["body"].(string))
+	if err != nil {
+		return err
+	}
+	response.Body = body
 
 	if val, ok := m["content_type"]; !ok {
 		response.ContentType = "text/plain"
@@ -43,4 +52,23 @@ func (response Response) WriteResponse(w http.ResponseWriter) {
 	w.WriteHeader(response.StatusCode)
 
 	fmt.Fprintf(w, response.Body)
+}
+
+func processBody(body string) (string, error) {
+	matched, err := regexp.MatchString(FILE_PATH_REGEXP, body)
+	if err != nil {
+		return "", err
+	}
+
+	if matched {
+		filename := strings.Replace(body, "file://", "", -1)
+		content, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return "", err
+		}
+		return string(content), nil
+	} else {
+		return body, nil
+	}
+
 }
