@@ -21,6 +21,9 @@ servers:
         status_code: 201
     `
 
+	err := validateSchema([]byte(config))
+	assert.Nil(t, err)
+
 	serverCollection, err := parseConfig([]byte(config))
 	assert.Nil(t, err)
 	assert.Equal(t, len(serverCollection.Servers), 1)

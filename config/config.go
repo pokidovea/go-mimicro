@@ -13,9 +13,14 @@ type MockServerCollection struct {
 	Servers []mock_server.MockServer `json:"servers"`
 }
 
-func validateSchema(data string) error {
+func validateSchema(data []byte) error {
+	jsonData, err := yaml.YAMLToJSON(data)
+	if err != nil {
+		return err
+	}
+
 	schemaLoader := gojsonschema.NewStringLoader(schema)
-	documentLoader := gojsonschema.NewStringLoader(data)
+	documentLoader := gojsonschema.NewStringLoader(string(jsonData))
 
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
@@ -64,5 +69,5 @@ func CheckConfig(configPath string) error {
 		return err
 	}
 
-	return validateSchema(string(data))
+	return validateSchema(data)
 }
