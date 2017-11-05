@@ -1,8 +1,9 @@
 package endpoint
 
 import (
-	"github.com/pokidovea/mimicro/mock_server/response"
 	"net/http"
+
+	"github.com/pokidovea/mimicro/mock_server/response"
 )
 
 type Endpoint struct {
