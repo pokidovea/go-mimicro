@@ -1,6 +1,7 @@
 package response
 
 import (
+	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
@@ -8,21 +9,31 @@ import (
 	"testing"
 )
 
-func TestResponseHasOnlyBody(t *testing.T) {
-	w := httptest.NewRecorder()
-	var response = Response{"OK", "", 0}
+func TestUnmarshallingOnlyBody(t *testing.T) {
+	str := `{"body":"OK"}`
 
-	response.WriteResponse(w)
+	var response Response
+	err := json.Unmarshal([]byte(str), &response)
+	assert.Nil(t, err)
 
-	resp := w.Result()
-	body, _ := ioutil.ReadAll(resp.Body)
-
-	assert.Equal(t, resp.Header.Get("Content-Type"), "text/plain")
-	assert.Equal(t, resp.StatusCode, http.StatusOK)
-	assert.Equal(t, string(body), "OK")
+	assert.Equal(t, "OK", response.Body)
+	assert.Equal(t, "text/plain", response.ContentType)
+	assert.Equal(t, http.StatusOK, response.StatusCode)
 }
 
-func TestAllFieldsAreDefined(t *testing.T) {
+func TestUnmarshallingAllFields(t *testing.T) {
+	str := `{"body":"{}", "content_type":"application/json", "status_code": 201}`
+
+	var response Response
+	err := json.Unmarshal([]byte(str), &response)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "{}", response.Body)
+	assert.Equal(t, "application/json", response.ContentType)
+	assert.Equal(t, http.StatusCreated, response.StatusCode)
+}
+
+func TestWriteResponse(t *testing.T) {
 	w := httptest.NewRecorder()
 	var response = Response{"{\"a\":1}", "application/json", http.StatusCreated}
 
@@ -31,7 +42,7 @@ func TestAllFieldsAreDefined(t *testing.T) {
 	resp := w.Result()
 	body, _ := ioutil.ReadAll(resp.Body)
 
-	assert.Equal(t, resp.Header.Get("Content-Type"), "application/json")
-	assert.Equal(t, resp.StatusCode, http.StatusCreated)
-	assert.Equal(t, string(body), "{\"a\":1}")
+	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, "{\"a\":1}", string(body))
 }

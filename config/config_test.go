@@ -29,21 +29,21 @@ servers:
 	assert.Equal(t, len(serverCollection.Servers), 1)
 
 	server := serverCollection.Servers[0]
-	assert.Equal(t, server.Port, 4573)
-	assert.Equal(t, len(server.Endpoints), 1)
+	assert.Equal(t, 4573, server.Port)
+	assert.Equal(t, 1, len(server.Endpoints))
 
 	endpoint := server.Endpoints[0]
-	assert.Equal(t, endpoint.Url, "/simple_url")
+	assert.Equal(t, "/simple_url", endpoint.Url)
 
 	get_response := endpoint.GET
-	assert.Equal(t, get_response.Body, "{}")
-	assert.Equal(t, get_response.ContentType, "application/json")
-	assert.Equal(t, get_response.StatusCode, http.StatusOK)
+	assert.Equal(t, "{}", get_response.Body)
+	assert.Equal(t, "application/json", get_response.ContentType)
+	assert.Equal(t, http.StatusOK, get_response.StatusCode)
 
 	post_response := endpoint.POST
-	assert.Equal(t, post_response.Body, "{}")
-	assert.Equal(t, get_response.ContentType, "text/plain")
-	assert.Equal(t, get_response.StatusCode, http.StatusCreated)
+	assert.Equal(t, "OK", post_response.Body)
+	assert.Equal(t, "text/plain", post_response.ContentType)
+	assert.Equal(t, http.StatusCreated, post_response.StatusCode)
 
 	patch_response := endpoint.PATCH
 	assert.Nil(t, patch_response)
