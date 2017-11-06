@@ -7,6 +7,9 @@ var schema string = `
     "additionalProperties": false,
     "required": ["servers"],
     "properties": {
+        "collectStats": {
+            "type": "boolean"
+        },
         "servers": {
             "uniqueItems": true,
             "items": {"$ref": "#/definitions/server"}

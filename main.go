@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/pokidovea/mimicro/config"
 	"os"
+
+	"github.com/pokidovea/mimicro/config"
+	"github.com/pokidovea/mimicro/stats"
 )
 
 func checkConfig(configPath string) error {
@@ -41,9 +43,22 @@ func main() {
 		panic(err)
 	}
 
-	done := make(chan bool, len(serverCollection.Servers))
+	doneBuffer := len(serverCollection.Servers)
+
+	if serverCollection.CollectStat {
+		doneBuffer++
+	}
+	statsChan := make(chan stats.Request)
+	done := make(chan bool, doneBuffer)
+
+	statCollector := stats.Collector{Chan: statsChan}
+
+	if serverCollection.CollectStat {
+		go statCollector.Run()
+		statCollector.HandleExit(done)
+	}
 	for _, server := range serverCollection.Servers {
-		go server.Serve(done)
+		go server.Serve(statsChan, done)
 	}
 
 	<-done

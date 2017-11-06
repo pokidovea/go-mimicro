@@ -2,15 +2,17 @@ package endpoint
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func createEndpoint() Endpoint {
 	str := `{
+		"server": "simple_server",
         "url": "/simple_url",
         "GET": {
             "body": "{}",

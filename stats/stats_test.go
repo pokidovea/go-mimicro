@@ -6,29 +6,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStatRecording(t *testing.T) {
-	stats := Stats{}
+func TestStatCollected(t *testing.T) {
+	collector := new(Collector)
 	request := Request{
 		Server:   "Simple server",
 		Endpoint: "/some_url",
 		Method:   "POST",
 	}
-	stats.Add(request)
-	assert.Equal(t, stats.Requests, []Request{Request{
-		Server:   "Simple server",
-		Endpoint: "/some_url",
-		Method:   "POST",
-	}})
+	collector.Add(request)
+	collector.Add(request)
+	assert.Equal(t, 2, collector.Get(request))
 }
 
-func TestStatFetcher(t *testing.T) {
-	stats := Stats{}
+func TestStatCollectedFromChannel(t *testing.T) {
+
+	collector := Collector{Chan: make(chan Request, 1)}
+
 	request := Request{
 		Server:   "Simple server",
 		Endpoint: "/some_url",
 		Method:   "POST",
 	}
-	stats.Add(request)
-	stats.Add(request)
-	assert.Equal(t, stats.Get(request), 2)
+	collector.Chan <- request
+	close(collector.Chan)
+	collector.Run()
+
+	assert.Equal(t, 1, collector.Get(request))
+
 }

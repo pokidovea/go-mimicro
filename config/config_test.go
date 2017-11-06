@@ -2,16 +2,18 @@ package config
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"path"
 	"runtime"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSimpleConfig(t *testing.T) {
 	config := `
+collectStats: true
 servers:
 - name: server_1
   port: 4573
@@ -31,6 +33,7 @@ servers:
 	serverCollection, err := parseConfig([]byte(config))
 	assert.Nil(t, err)
 	assert.Equal(t, len(serverCollection.Servers), 1)
+	assert.True(t, serverCollection.CollectStat)
 
 	server := serverCollection.Servers[0]
 	assert.Equal(t, 4573, server.Port)
@@ -65,6 +68,7 @@ func TestResponseBodyFromFile(t *testing.T) {
 	filepath := path.Join(path.Dir(filename), "fixtures", "server_1_simple_response.json")
 
 	config := fmt.Sprintf(`
+collectStats: false
 servers:
 - name: server_1
   port: 4573
@@ -81,6 +85,7 @@ servers:
 	serverCollection, err := parseConfig([]byte(config))
 	assert.Nil(t, err)
 	assert.Equal(t, len(serverCollection.Servers), 1)
+	assert.False(t, serverCollection.CollectStat)
 
 	server := serverCollection.Servers[0]
 	assert.Equal(t, 4573, server.Port)
