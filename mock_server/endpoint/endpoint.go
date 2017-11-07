@@ -25,30 +25,35 @@ func (endpoint *Endpoint) CollectStatistics(statisticsChannel chan statistics.Re
 
 func (endpoint Endpoint) GetHandler() func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		if endpoint.statisticsChannel != nil {
-			endpoint.statisticsChannel <- statistics.Request{endpoint.serverName, endpoint.Url, req.Method}
-		}
+		var response *response.Response
+
 		if req.Method == "GET" && endpoint.GET != nil {
-			endpoint.GET.WriteResponse(w)
-			return
-		}
-		if req.Method == "POST" && endpoint.POST != nil {
-			endpoint.POST.WriteResponse(w)
-			return
-		}
-		if req.Method == "PATCH" && endpoint.PATCH != nil {
-			endpoint.PATCH.WriteResponse(w)
-			return
-		}
-		if req.Method == "PUT" && endpoint.PUT != nil {
-			endpoint.PUT.WriteResponse(w)
-			return
-		}
-		if req.Method == "DELETE" && endpoint.DELETE != nil {
-			endpoint.DELETE.WriteResponse(w)
-			return
+			response = endpoint.GET
+		} else if req.Method == "POST" && endpoint.POST != nil {
+			response = endpoint.POST
+		} else if req.Method == "PATCH" && endpoint.PATCH != nil {
+			response = endpoint.PATCH
+		} else if req.Method == "PUT" && endpoint.PUT != nil {
+			response = endpoint.PUT
+		} else if req.Method == "DELETE" && endpoint.DELETE != nil {
+			response = endpoint.DELETE
 		}
 
-		http.NotFound(w, req)
+		statisticsRequest := statistics.Request{
+			ServerName: endpoint.serverName,
+			Url:        endpoint.Url,
+			Method:     req.Method,
+		}
+
+		if response != nil {
+			response.WriteResponse(w)
+			statisticsRequest.StatusCode = response.StatusCode
+		} else {
+			statisticsRequest.StatusCode = http.StatusNotFound
+			http.NotFound(w, req)
+		}
+		if endpoint.statisticsChannel != nil {
+			endpoint.statisticsChannel <- statisticsRequest
+		}
 	}
 }

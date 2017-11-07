@@ -9,9 +9,9 @@ import (
 func TestCollection(t *testing.T) {
 	collector := new(Collector)
 	request := Request{
-		Server:   "Simple server",
-		Endpoint: "/some_url",
-		Method:   "POST",
+		ServerName: "Simple server",
+		Url:        "/some_url",
+		Method:     "POST",
 	}
 	collector.Add(request)
 	collector.Add(request)
@@ -25,9 +25,9 @@ func TestCollectionFromChannel(t *testing.T) {
 	defer close(done)
 
 	request := Request{
-		Server:   "Simple server",
-		Endpoint: "/some_url",
-		Method:   "POST",
+		ServerName: "Simple server",
+		Url:        "/some_url",
+		Method:     "POST",
 	}
 	collector.Chan <- request
 	close(collector.Chan)
