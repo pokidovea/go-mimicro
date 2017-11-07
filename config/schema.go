@@ -7,7 +7,7 @@ var schema string = `
     "additionalProperties": false,
     "required": ["servers"],
     "properties": {
-        "collectStats": {
+        "collect_statistics": {
             "type": "boolean"
         },
         "servers": {

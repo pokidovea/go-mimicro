@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/pokidovea/mimicro/config"
-	"github.com/pokidovea/mimicro/stats"
+	"github.com/pokidovea/mimicro/statistics"
 )
 
 func checkConfig(configPath string) error {
@@ -45,20 +45,20 @@ func main() {
 
 	doneBuffer := len(serverCollection.Servers)
 
-	if serverCollection.CollectStat {
+	if serverCollection.CollectStatistics {
 		doneBuffer++
 	}
-	statsChan := make(chan stats.Request)
+	statisticsChannel := make(chan statistics.Request)
+	statisticsCollector := statistics.Collector{Chan: statisticsChannel}
+
 	done := make(chan bool, doneBuffer)
 
-	statCollector := stats.Collector{Chan: statsChan}
-
-	if serverCollection.CollectStat {
-		go statCollector.Run()
-		statCollector.HandleExit(done)
+	if serverCollection.CollectStatistics {
+		go statisticsCollector.Run()
+		statisticsCollector.HandleExit(done)
 	}
 	for _, server := range serverCollection.Servers {
-		go server.Serve(statsChan, done)
+		go server.Serve(statisticsChannel, done)
 	}
 
 	<-done

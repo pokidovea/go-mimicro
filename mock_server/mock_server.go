@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/pokidovea/mimicro/mock_server/endpoint"
-	"github.com/pokidovea/mimicro/stats"
+	"github.com/pokidovea/mimicro/statistics"
 )
 
 type MockServer struct {
@@ -15,11 +15,11 @@ type MockServer struct {
 	Endpoints []endpoint.Endpoint `json:"endpoints"`
 }
 
-func (mockServer MockServer) Serve(mainStats chan stats.Request, done chan bool) {
+func (mockServer MockServer) Serve(statisticsChannel chan statistics.Request, done chan bool) {
 	mux := http.NewServeMux()
 
 	for _, endpoint := range mockServer.Endpoints {
-		endpoint.CollectStats(mainStats, mockServer.Name)
+		endpoint.CollectStatistics(statisticsChannel, mockServer.Name)
 		mux.HandleFunc(endpoint.Url, endpoint.GetHandler())
 	}
 

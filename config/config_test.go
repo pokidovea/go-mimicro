@@ -13,7 +13,7 @@ import (
 
 func TestSimpleConfig(t *testing.T) {
 	config := `
-collectStats: true
+collect_statistics: true
 servers:
 - name: server_1
   port: 4573
@@ -33,7 +33,7 @@ servers:
 	serverCollection, err := parseConfig([]byte(config))
 	assert.Nil(t, err)
 	assert.Equal(t, len(serverCollection.Servers), 1)
-	assert.True(t, serverCollection.CollectStat)
+	assert.True(t, serverCollection.CollectStatistics)
 
 	server := serverCollection.Servers[0]
 	assert.Equal(t, 4573, server.Port)
@@ -68,7 +68,7 @@ func TestResponseBodyFromFile(t *testing.T) {
 	filepath := path.Join(path.Dir(filename), "fixtures", "server_1_simple_response.json")
 
 	config := fmt.Sprintf(`
-collectStats: false
+collect_statistics: false
 servers:
 - name: server_1
   port: 4573
@@ -85,7 +85,7 @@ servers:
 	serverCollection, err := parseConfig([]byte(config))
 	assert.Nil(t, err)
 	assert.Equal(t, len(serverCollection.Servers), 1)
-	assert.False(t, serverCollection.CollectStat)
+	assert.False(t, serverCollection.CollectStatistics)
 
 	server := serverCollection.Servers[0]
 	assert.Equal(t, 4573, server.Port)

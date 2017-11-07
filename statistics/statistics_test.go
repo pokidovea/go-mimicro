@@ -1,4 +1,4 @@
-package stats
+package statistics
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStatCollected(t *testing.T) {
+func TestCollection(t *testing.T) {
 	collector := new(Collector)
 	request := Request{
 		Server:   "Simple server",
@@ -18,7 +18,7 @@ func TestStatCollected(t *testing.T) {
 	assert.Equal(t, 2, collector.Get(request))
 }
 
-func TestStatCollectedFromChannel(t *testing.T) {
+func TestCollectionFromChannel(t *testing.T) {
 
 	collector := Collector{Chan: make(chan Request, 1)}
 
