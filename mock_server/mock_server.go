@@ -37,7 +37,7 @@ func (mockServer MockServer) startHttpServer(statisticsChannel chan statistics.R
 	}
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 			// cannot panic, because this probably is an intentional close
 			log.Printf("Httpserver: ListenAndServe() error: %s", err)
 		}
@@ -55,8 +55,13 @@ func (mockServer MockServer) Serve(statisticsChannel chan statistics.Request, wg
 	<-interrupt
 
 	log.Printf("[%s] Stopping a server...", mockServer.Name)
-	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
-	srv.Shutdown(ctx)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("[%s] Shutdown error: %s", mockServer.Name, err)
+	}
+
 	log.Printf("[%s] Server stopped", mockServer.Name)
 
 	wg.Done()
