@@ -3,14 +3,16 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+
 	"github.com/ghodss/yaml"
 	"github.com/pokidovea/mimicro/mock_server"
 	"github.com/xeipuuv/gojsonschema"
-	"io/ioutil"
 )
 
 type MockServerCollection struct {
-	Servers []mock_server.MockServer `json:"servers"`
+	CollectStatistics bool                     `json:"collect_statistics"`
+	Servers           []mock_server.MockServer `json:"servers"`
 }
 
 func validateSchema(data []byte) error {

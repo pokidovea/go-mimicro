@@ -2,11 +2,13 @@ package endpoint
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/pokidovea/mimicro/statistics"
+	"github.com/stretchr/testify/assert"
 )
 
 func createEndpoint() Endpoint {
@@ -85,4 +87,21 @@ func TestHandleNonexistingResponses(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 		assert.Equal(t, "404 page not found\n", string(body))
 	}
+}
+
+func TestWritesStatistics(t *testing.T) {
+	endpoint := createEndpoint()
+	statisticsChannel := make(chan statistics.Request, 1)
+	defer close(statisticsChannel)
+
+	endpoint.CollectStatistics(statisticsChannel, "simple_test_server")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/simple_url", nil)
+
+	handler := endpoint.GetHandler()
+	handler(w, r)
+
+	collectedStatistics := <-statisticsChannel
+	assert.Equal(t, statistics.Request{"simple_test_server", "/simple_url", "GET"}, collectedStatistics)
+
 }
