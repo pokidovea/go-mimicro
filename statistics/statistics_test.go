@@ -1,6 +1,7 @@
 package statistics
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,11 @@ func TestCollectionFromChannel(t *testing.T) {
 	collector.Chan <- request
 	close(collector.Chan)
 
-	collector.Run(done)
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go collector.Run(&wg)
+	wg.Wait()
 
 	assert.Equal(t, 1, collector.Get(request))
 }
