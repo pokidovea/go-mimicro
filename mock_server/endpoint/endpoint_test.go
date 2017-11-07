@@ -101,7 +101,13 @@ func TestWritesStatistics(t *testing.T) {
 	handler := endpoint.GetHandler()
 	handler(w, r)
 
-	collectedStatistics := <-statisticsChannel
-	assert.Equal(t, statistics.Request{"simple_test_server", "/simple_url", "GET"}, collectedStatistics)
+	expectedRequest := statistics.Request{
+		ServerName:  "simple_test_server",
+		Url:         "/simple_url",
+		Method:      "GET",
+		StatusCode:  endpoint.GET.StatusCode,
+		ContentType: endpoint.GET.ContentType,
+	}
+	assert.Equal(t, expectedRequest, <-statisticsChannel)
 
 }
