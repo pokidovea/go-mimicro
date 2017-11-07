@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.org/pokidovea/mimicro.svg?branch=master)](https://travis-ci.org/pokidovea/mimicro)
+[![Build Status](https://travis-ci.org/pokidovea/mimicro.svg?branch=master)](https://travis-ci.org/pokidovea/mimicro) [![codecov](https://codecov.io/gh/pokidovea/mimicro/branch/master/graph/badge.svg)](https://codecov.io/gh/pokidovea/mimicro)
 
 # mimicro
+
 A mock-server
