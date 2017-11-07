@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/pokidovea/mimicro/mock_server/response"
@@ -52,6 +53,8 @@ func (endpoint Endpoint) GetHandler() func(w http.ResponseWriter, req *http.Requ
 			statisticsRequest.StatusCode = http.StatusNotFound
 			http.NotFound(w, req)
 		}
+		log.Printf("Requested %s \n", statisticsRequest)
+
 		if endpoint.statisticsChannel != nil {
 			endpoint.statisticsChannel <- statisticsRequest
 		}
