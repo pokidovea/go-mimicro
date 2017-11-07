@@ -21,6 +21,8 @@ func TestCollection(t *testing.T) {
 func TestCollectionFromChannel(t *testing.T) {
 
 	collector := Collector{Chan: make(chan Request, 1)}
+	done := make(chan bool, 1)
+	defer close(done)
 
 	request := Request{
 		Server:   "Simple server",
@@ -29,8 +31,8 @@ func TestCollectionFromChannel(t *testing.T) {
 	}
 	collector.Chan <- request
 	close(collector.Chan)
-	collector.Run()
+
+	collector.Run(done)
 
 	assert.Equal(t, 1, collector.Get(request))
-
 }

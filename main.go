@@ -43,19 +43,18 @@ func main() {
 		panic(err)
 	}
 
-	doneBuffer := len(serverCollection.Servers)
+	doneBufferLength := len(serverCollection.Servers)
 
 	if serverCollection.CollectStatistics {
-		doneBuffer++
+		doneBufferLength++
 	}
 	statisticsChannel := make(chan statistics.Request)
 	statisticsCollector := statistics.Collector{Chan: statisticsChannel}
 
-	done := make(chan bool, doneBuffer)
+	done := make(chan bool, doneBufferLength)
 
 	if serverCollection.CollectStatistics {
-		go statisticsCollector.Run()
-		statisticsCollector.HandleExit(done)
+		go statisticsCollector.Run(done)
 	}
 	for _, server := range serverCollection.Servers {
 		go server.Serve(statisticsChannel, done)
