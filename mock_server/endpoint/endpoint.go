@@ -9,7 +9,7 @@ import (
 
 type Endpoint struct {
 	statisticsChannel chan statistics.Request
-	server            string
+	serverName        string
 	Url               string             `json:"url"`
 	GET               *response.Response `json:"GET"`
 	POST              *response.Response `json:"POST"`
@@ -18,15 +18,15 @@ type Endpoint struct {
 	DELETE            *response.Response `json:"DELETE"`
 }
 
-func (endpoint *Endpoint) CollectStatistics(statisticsChannel chan statistics.Request, server string) {
+func (endpoint *Endpoint) CollectStatistics(statisticsChannel chan statistics.Request, serverName string) {
 	endpoint.statisticsChannel = statisticsChannel
-	endpoint.server = server
+	endpoint.serverName = serverName
 }
 
 func (endpoint Endpoint) GetHandler() func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if endpoint.statisticsChannel != nil {
-			endpoint.statisticsChannel <- statistics.Request{endpoint.server, endpoint.Url, req.Method}
+			endpoint.statisticsChannel <- statistics.Request{endpoint.serverName, endpoint.Url, req.Method}
 		}
 		if req.Method == "GET" && endpoint.GET != nil {
 			endpoint.GET.WriteResponse(w)
