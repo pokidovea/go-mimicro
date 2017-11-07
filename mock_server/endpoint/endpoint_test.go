@@ -102,11 +102,10 @@ func TestWritesStatistics(t *testing.T) {
 	handler(w, r)
 
 	expectedRequest := statistics.Request{
-		ServerName:  "simple_test_server",
-		Url:         "/simple_url",
-		Method:      "GET",
-		StatusCode:  endpoint.GET.StatusCode,
-		ContentType: endpoint.GET.ContentType,
+		ServerName: "simple_test_server",
+		Url:        "/simple_url",
+		Method:     "GET",
+		StatusCode: endpoint.GET.StatusCode,
 	}
 	assert.Equal(t, expectedRequest, <-statisticsChannel)
 

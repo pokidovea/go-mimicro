@@ -7,11 +7,10 @@ import (
 )
 
 type Request struct {
-	ServerName  string `json:"server"`
-	Url         string `json:"endpoint"`
-	Method      string `json:"method"`
-	StatusCode  int    `json:"status_code"`
-	ContentType string `json:"content_type"`
+	ServerName string `json:"server"`
+	Url        string `json:"endpoint"`
+	Method     string `json:"method"`
+	StatusCode int    `json:"status_code"`
 }
 
 type Collector struct {

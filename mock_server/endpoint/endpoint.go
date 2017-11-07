@@ -47,7 +47,6 @@ func (endpoint Endpoint) GetHandler() func(w http.ResponseWriter, req *http.Requ
 
 		if response != nil {
 			response.WriteResponse(w)
-			statisticsRequest.ContentType = response.ContentType
 			statisticsRequest.StatusCode = response.StatusCode
 		} else {
 			statisticsRequest.StatusCode = http.StatusNotFound
