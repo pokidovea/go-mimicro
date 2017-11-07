@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 )
 
 type Request struct {
@@ -31,24 +32,23 @@ func (collector Collector) Get(request Request) int {
 	return output
 }
 
-func (collector *Collector) Run(done chan bool) {
+func (collector *Collector) Run(wg *sync.WaitGroup) {
 	signalChannel := make(chan os.Signal, 1)
-	defer close(signalChannel)
 	signal.Notify(signalChannel, os.Interrupt)
+
+	defer close(signalChannel)
+	defer signal.Stop(signalChannel)
+	defer log.Printf("Statistics collector stopped")
+	defer wg.Done()
 
 	for {
 		select {
 		case request, ok := <-collector.Chan:
 			if !ok {
-				done <- true
-				log.Printf("Statistics collector stop")
 				return
 			}
 			collector.Add(request)
 		case <-signalChannel:
-			close(collector.Chan)
-			done <- true
-			log.Printf("Statistics collector stop")
 			return
 		}
 	}

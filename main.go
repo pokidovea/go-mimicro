@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
+	"sync"
 
 	"github.com/pokidovea/mimicro/config"
 	"github.com/pokidovea/mimicro/statistics"
@@ -43,22 +45,19 @@ func main() {
 		panic(err)
 	}
 
-	doneBufferLength := len(serverCollection.Servers)
-
-	if serverCollection.CollectStatistics {
-		doneBufferLength++
-	}
 	statisticsChannel := make(chan statistics.Request)
 	statisticsCollector := statistics.Collector{Chan: statisticsChannel}
 
-	done := make(chan bool, doneBufferLength)
-
+	var wg sync.WaitGroup
 	if serverCollection.CollectStatistics {
-		go statisticsCollector.Run(done)
+		wg.Add(1)
+		go statisticsCollector.Run(&wg)
 	}
 	for _, server := range serverCollection.Servers {
-		go server.Serve(statisticsChannel, done)
+		wg.Add(1)
+		go server.Serve(statisticsChannel, &wg)
 	}
 
-	<-done
+	wg.Wait()
+	log.Printf("Mimicro successfully down")
 }
