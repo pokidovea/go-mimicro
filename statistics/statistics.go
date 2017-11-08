@@ -35,7 +35,6 @@ func (collector *Collector) Add(request Request) {
 		collector.requests = make(map[Request]int)
 	}
 	collector.requests[request]++
-	log.Printf("Requested %s \n", request)
 }
 
 func (collector Collector) Get(request Request) int {

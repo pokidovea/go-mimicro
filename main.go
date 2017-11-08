@@ -46,14 +46,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	statisticsChannel := make(chan statistics.Request)
-	statisticsCollector := statistics.Collector{Chan: statisticsChannel}
-
 	var wg sync.WaitGroup
+	var statisticsChannel chan statistics.Request
+
 	if serverCollection.CollectStatistics {
 		wg.Add(1)
+
+		statisticsChannel = make(chan statistics.Request)
+
+		statisticsCollector := statistics.Collector{Chan: statisticsChannel}
 		go statisticsCollector.Run(&wg)
 	}
+
 	for _, server := range serverCollection.Servers {
 		wg.Add(1)
 		go server.Serve(statisticsChannel, &wg)
