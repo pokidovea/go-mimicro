@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/pokidovea/mimicro/mock_server/endpoint"
 	"github.com/pokidovea/mimicro/statistics"
 )
@@ -21,16 +22,16 @@ type MockServer struct {
 }
 
 func (mockServer MockServer) startHttpServer(statisticsChannel chan statistics.Request) *http.Server {
-	mux := http.NewServeMux()
+	router := mux.NewRouter()
 
 	for _, endpoint := range mockServer.Endpoints {
 		endpoint.CollectStatistics(statisticsChannel, mockServer.Name)
-		mux.HandleFunc(endpoint.Url, endpoint.GetHandler())
+		router.HandleFunc(endpoint.Url, endpoint.GetHandler())
 	}
 
 	srv := &http.Server{
 		Addr:           ":" + strconv.Itoa(mockServer.Port),
-		Handler:        mux,
+		Handler:        router,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
