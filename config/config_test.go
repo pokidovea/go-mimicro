@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"path"
 	"runtime"
@@ -97,8 +96,7 @@ servers:
 	assert.Equal(t, "/response_from_file", endpoint.Url)
 
 	get_response := endpoint.GET
-	body, err := ioutil.ReadFile(filepath)
-	assert.Equal(t, string(body), get_response.Body)
+	assert.Equal(t, filepath, get_response.Body)
 	assert.Equal(t, "application/json", get_response.ContentType)
 	assert.Equal(t, http.StatusOK, get_response.StatusCode)
 
@@ -158,8 +156,8 @@ func TestResponseBodyFromFileByRelativePath(t *testing.T) {
 		assert.Equal(t, "/response_from_file", endpoint.Url)
 
 		get_response := endpoint.GET
-		body, err := ioutil.ReadFile(fullFilePath)
-		assert.Equal(t, string(body), get_response.Body)
+
+		assert.Equal(t, fullFilePath, get_response.Body)
 		assert.Equal(t, "application/json", get_response.ContentType)
 		assert.Equal(t, http.StatusOK, get_response.StatusCode)
 

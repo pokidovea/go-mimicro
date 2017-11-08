@@ -73,14 +73,15 @@ func (response *Response) setBody(body string) error {
 	}
 
 	if matched {
-		response.isFile = true
 		filePath := strings.Replace(body, "file://", "", -1)
 
 		if filePath[0] != '/' {
 			configFolder := path.Dir(settings.CONFIG_PATH)
 			filePath = path.Join(configFolder, filePath)
-			response.Body = filePath
 		}
+
+		response.isFile = true
+		response.Body = filePath
 	} else {
 		response.Body = body
 	}

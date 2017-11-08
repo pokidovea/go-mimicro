@@ -2,11 +2,12 @@ package response
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestUnmarshallingOnlyBody(t *testing.T) {
@@ -35,9 +36,10 @@ func TestUnmarshallingAllFields(t *testing.T) {
 
 func TestWriteResponse(t *testing.T) {
 	w := httptest.NewRecorder()
-	var response = Response{"{\"a\":1}", "application/json", http.StatusCreated}
+	r := httptest.NewRequest("POST", "/simple_url", nil)
+	var response = Response{"{\"a\":1}", "application/json", http.StatusCreated, false}
 
-	response.WriteResponse(w)
+	response.WriteResponse(w, r)
 
 	resp := w.Result()
 	body, _ := ioutil.ReadAll(resp.Body)
