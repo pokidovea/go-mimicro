@@ -1,6 +1,7 @@
 package statistics
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -14,6 +15,16 @@ type Request struct {
 	StatusCode int    `json:"status_code"`
 }
 
+func (request Request) String() string {
+	return fmt.Sprintf(
+		"server: %s; url: %s; method: %s; response status: %d",
+		request.ServerName,
+		request.Url,
+		request.Method,
+		request.StatusCode,
+	)
+}
+
 type Collector struct {
 	Chan     chan Request
 	requests map[Request]int
@@ -24,7 +35,6 @@ func (collector *Collector) Add(request Request) {
 		collector.requests = make(map[Request]int)
 	}
 	collector.requests[request]++
-	log.Printf("Added %s (%d)\n", request, collector.requests[request])
 }
 
 func (collector Collector) Get(request Request) int {

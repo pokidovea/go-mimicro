@@ -1,6 +1,8 @@
 package statistics
 
 import (
+	"fmt"
+	"net/http"
 	"sync"
 	"testing"
 
@@ -40,4 +42,19 @@ func TestCollectionFromChannel(t *testing.T) {
 	wg.Wait()
 
 	assert.Equal(t, 1, collector.Get(request))
+}
+
+func TestStringifyRequest(t *testing.T) {
+	request := Request{
+		ServerName: "Simple server",
+		Url:        "/some_url",
+		Method:     "POST",
+		StatusCode: http.StatusCreated,
+	}
+
+	assert.Equal(
+		t,
+		"server: Simple server; url: /some_url; method: POST; response status: 201",
+		fmt.Sprintf("%s", request),
+	)
 }
