@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"path"
 	"regexp"
 	"strings"
+
+	"github.com/pokidovea/mimicro/settings"
 )
 
 const FILE_PATH_REGEXP = `^file:\/\/[\/\w\.]*$`
@@ -61,8 +64,13 @@ func processBody(body string) (string, error) {
 	}
 
 	if matched {
-		filename := strings.Replace(body, "file://", "", -1)
-		content, err := ioutil.ReadFile(filename)
+		filePath := strings.Replace(body, "file://", "", -1)
+		if filePath[0] != '/' {
+			configFolder := path.Dir(settings.CONFIG_PATH)
+			filePath = path.Join(configFolder, filePath)
+		}
+
+		content, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			return "", err
 		}

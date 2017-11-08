@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 
 	"github.com/ghodss/yaml"
 	"github.com/pokidovea/mimicro/mock_server"
+	"github.com/pokidovea/mimicro/settings"
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -56,6 +58,12 @@ func parseConfig(data []byte) (*MockServerCollection, error) {
 
 func Load(configPath string) (*MockServerCollection, error) {
 	data, err := ioutil.ReadFile(configPath)
+
+	if err != nil {
+		return nil, err
+	}
+
+	settings.CONFIG_PATH, err = filepath.Abs(configPath)
 
 	if err != nil {
 		return nil, err

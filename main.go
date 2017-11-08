@@ -42,7 +42,8 @@ func main() {
 	serverCollection, err := config.Load(*configPath)
 
 	if err != nil {
-		panic(err)
+		log.Printf(err.Error())
+		os.Exit(1)
 	}
 
 	var wg sync.WaitGroup
