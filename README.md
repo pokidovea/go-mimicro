@@ -2,4 +2,10 @@
 
 # mimicro
 
-A mock-server
+A mock-server on steroids
+
+## How to run:
+
+```
+go run main.go -c ./examples/config.yaml
+```
