@@ -5,9 +5,16 @@ servers:
     endpoints:
       - url: /simple_url
         GET:
-          body: file://./server_1_response_with_var.json
+          template: "{}"
           content_type: application/json
         POST:
-          body: "OK"
+          template: "OK"
           content_type: text/plain
           status_code: 201
+      - url: /picture
+        GET:
+          file: file://mimicro.png
+      - url: /url/with/{var}
+        GET:
+          template: file://response_with_var.json
+          content_type: application/json

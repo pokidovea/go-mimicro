@@ -1,6 +1,6 @@
 package config
 
-var schema string = `
+var schema = `
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
@@ -48,11 +48,17 @@ var schema string = `
             }
         },
         "response": {
+            "oneOf": [
+                {"$ref": "#/definitions/templateResponse"},
+                {"$ref": "#/definitions/fileResponse"}
+            ]
+        },
+        "templateResponse": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["body"],
+            "required": ["template"],
             "properties": {
-                "body": {"type": "string"},
+                "template": {"type": "string"},
                 "content_type": {"type": "string"},
                 "status_code": {
                     "type": "integer",
@@ -64,6 +70,22 @@ var schema string = `
                         411, 412, 413, 414, 415, 416, 417, 418, 421, 422, 423, 424, 426, 428, 429, 431, 451,
                         500, 501, 502, 503, 504, 505, 506, 507, 508, 510, 511
                     ]
+                }
+            }
+        },
+        "fileResponse": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file"],
+            "properties": {
+                "file": {
+                    "type": "string",
+                    "pattern": "^file:\/\/[a-zA-Z0-9_ -\/]*$"
+                },
+                "content_type": {"type": "string"},
+                "status_code": {
+                    "type": "integer",
+                    "enum": [200]
                 }
             }
         }
