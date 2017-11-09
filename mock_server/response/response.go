@@ -3,7 +3,6 @@ package response
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"path"
 	"regexp"
@@ -18,6 +17,7 @@ type Response struct {
 	Body        string `json:"body"`
 	ContentType string `json:"content_type"`
 	StatusCode  int    `json:"status_code"`
+	isFile      bool
 }
 
 func (response *Response) UnmarshalJSON(data []byte) error {
@@ -29,19 +29,22 @@ func (response *Response) UnmarshalJSON(data []byte) error {
 
 	m := f.(map[string]interface{})
 
-	body, err := processBody(m["body"].(string))
+	err = response.setBody(m["body"].(string))
 	if err != nil {
 		return err
 	}
-	response.Body = body
 
 	if val, ok := m["content_type"]; !ok {
-		response.ContentType = "text/plain"
+		if !response.isFile {
+			response.ContentType = "text/plain"
+		}
+		// otherwise ctype will be detected automatically
 	} else {
 		response.ContentType = val.(string)
 	}
 
-	if val, ok := m["status_code"]; !ok {
+	val, ok := m["status_code"]
+	if !ok || response.isFile {
 		response.StatusCode = http.StatusOK
 	} else {
 		response.StatusCode = int(val.(float64))
@@ -50,33 +53,38 @@ func (response *Response) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (response Response) WriteResponse(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", response.ContentType)
-	w.WriteHeader(response.StatusCode)
+func (response *Response) WriteResponse(w http.ResponseWriter, req *http.Request) {
+	if response.ContentType != "" {
+		w.Header().Set("Content-Type", response.ContentType)
+	}
 
-	fmt.Fprintf(w, response.Body)
+	if response.isFile {
+		http.ServeFile(w, req, response.Body)
+	} else {
+		w.WriteHeader(response.StatusCode)
+		fmt.Fprintf(w, response.Body)
+	}
 }
 
-func processBody(body string) (string, error) {
+func (response *Response) setBody(body string) error {
 	matched, err := regexp.MatchString(FILE_PATH_REGEXP, body)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if matched {
 		filePath := strings.Replace(body, "file://", "", -1)
+
 		if filePath[0] != '/' {
 			configFolder := path.Dir(settings.CONFIG_PATH)
 			filePath = path.Join(configFolder, filePath)
 		}
 
-		content, err := ioutil.ReadFile(filePath)
-		if err != nil {
-			return "", err
-		}
-		return string(content), nil
+		response.isFile = true
+		response.Body = filePath
 	} else {
-		return body, nil
+		response.Body = body
 	}
 
+	return nil
 }

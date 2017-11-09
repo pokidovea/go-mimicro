@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"path"
 	"runtime"
@@ -44,24 +43,24 @@ servers:
 	endpoint := server.Endpoints[0]
 	assert.Equal(t, "/simple_url", endpoint.Url)
 
-	get_response := endpoint.GET
-	assert.Equal(t, "{}", get_response.Body)
-	assert.Equal(t, "application/json", get_response.ContentType)
-	assert.Equal(t, http.StatusOK, get_response.StatusCode)
+	getResponse := endpoint.GET
+	assert.Equal(t, "{}", getResponse.Body)
+	assert.Equal(t, "application/json", getResponse.ContentType)
+	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
-	post_response := endpoint.POST
-	assert.Equal(t, "OK", post_response.Body)
-	assert.Equal(t, "text/plain", post_response.ContentType)
-	assert.Equal(t, http.StatusCreated, post_response.StatusCode)
+	postResponse := endpoint.POST
+	assert.Equal(t, "OK", postResponse.Body)
+	assert.Equal(t, "text/plain", postResponse.ContentType)
+	assert.Equal(t, http.StatusCreated, postResponse.StatusCode)
 
-	patch_response := endpoint.PATCH
-	assert.Nil(t, patch_response)
+	patchResponse := endpoint.PATCH
+	assert.Nil(t, patchResponse)
 
-	put_response := endpoint.PUT
-	assert.Nil(t, put_response)
+	putResponse := endpoint.PUT
+	assert.Nil(t, putResponse)
 
-	delete_response := endpoint.DELETE
-	assert.Nil(t, delete_response)
+	deleteResponse := endpoint.DELETE
+	assert.Nil(t, deleteResponse)
 }
 
 func TestResponseBodyFromFileByAbsolutePath(t *testing.T) {
@@ -96,23 +95,22 @@ servers:
 	endpoint := server.Endpoints[0]
 	assert.Equal(t, "/response_from_file", endpoint.Url)
 
-	get_response := endpoint.GET
-	body, err := ioutil.ReadFile(filepath)
-	assert.Equal(t, string(body), get_response.Body)
-	assert.Equal(t, "application/json", get_response.ContentType)
-	assert.Equal(t, http.StatusOK, get_response.StatusCode)
+	getResponse := endpoint.GET
+	assert.Equal(t, filepath, getResponse.Body)
+	assert.Equal(t, "application/json", getResponse.ContentType)
+	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
-	post_response := endpoint.POST
-	assert.Nil(t, post_response)
+	postResponse := endpoint.POST
+	assert.Nil(t, postResponse)
 
-	patch_response := endpoint.PATCH
-	assert.Nil(t, patch_response)
+	patchResponse := endpoint.PATCH
+	assert.Nil(t, patchResponse)
 
-	put_response := endpoint.PUT
-	assert.Nil(t, put_response)
+	putResponse := endpoint.PUT
+	assert.Nil(t, putResponse)
 
-	delete_response := endpoint.DELETE
-	assert.Nil(t, delete_response)
+	deleteResponse := endpoint.DELETE
+	assert.Nil(t, deleteResponse)
 }
 
 func TestResponseBodyFromFileByRelativePath(t *testing.T) {
@@ -157,22 +155,84 @@ func TestResponseBodyFromFileByRelativePath(t *testing.T) {
 		endpoint := server.Endpoints[0]
 		assert.Equal(t, "/response_from_file", endpoint.Url)
 
-		get_response := endpoint.GET
-		body, err := ioutil.ReadFile(fullFilePath)
-		assert.Equal(t, string(body), get_response.Body)
-		assert.Equal(t, "application/json", get_response.ContentType)
-		assert.Equal(t, http.StatusOK, get_response.StatusCode)
+		getResponse := endpoint.GET
 
-		post_response := endpoint.POST
-		assert.Nil(t, post_response)
+		assert.Equal(t, fullFilePath, getResponse.Body)
+		assert.Equal(t, "application/json", getResponse.ContentType)
+		assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
-		patch_response := endpoint.PATCH
-		assert.Nil(t, patch_response)
+		postResponse := endpoint.POST
+		assert.Nil(t, postResponse)
 
-		put_response := endpoint.PUT
-		assert.Nil(t, put_response)
+		patchResponse := endpoint.PATCH
+		assert.Nil(t, patchResponse)
 
-		delete_response := endpoint.DELETE
-		assert.Nil(t, delete_response)
+		putResponse := endpoint.PUT
+		assert.Nil(t, putResponse)
+
+		deleteResponse := endpoint.DELETE
+		assert.Nil(t, deleteResponse)
+	}
+}
+
+func TestBinaryFile(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	settings.CONFIG_PATH = path.Join(path.Dir(filename), "fixtures", "config.yaml")
+	filepath := "mimicro.png"
+	fullFilePath := path.Join(path.Dir(settings.CONFIG_PATH), filepath)
+
+	// we can set any content type for binary file, but if it is empty, it is autodetected while serving
+	ctypes := []string{
+		"",
+		"application/json",
+	}
+
+	for _, ctype := range ctypes {
+		// server ignores status code from config while serving file. It's always 200
+		config := fmt.Sprintf(`
+        collect_statistics: false
+        servers:
+        - name: server_1
+          port: 4573
+          endpoints:
+            - url: /get_picture
+              GET:
+                body: file://%s
+                status_code: 201
+                content_type: "%s"
+            `, filepath, ctype)
+
+		err := validateSchema([]byte(config))
+		assert.Nil(t, err)
+
+		serverCollection, err := parseConfig([]byte(config))
+		assert.Nil(t, err)
+		assert.Equal(t, len(serverCollection.Servers), 1)
+		assert.False(t, serverCollection.CollectStatistics)
+
+		server := serverCollection.Servers[0]
+		assert.Equal(t, 4573, server.Port)
+		assert.Equal(t, "server_1", server.Name)
+		assert.Equal(t, 1, len(server.Endpoints))
+
+		endpoint := server.Endpoints[0]
+		assert.Equal(t, "/get_picture", endpoint.Url)
+
+		getResponse := endpoint.GET
+		assert.Equal(t, fullFilePath, getResponse.Body)
+		assert.Equal(t, ctype, getResponse.ContentType)
+		assert.Equal(t, http.StatusOK, getResponse.StatusCode)
+
+		postResponse := endpoint.POST
+		assert.Nil(t, postResponse)
+
+		patchResponse := endpoint.PATCH
+		assert.Nil(t, patchResponse)
+
+		putResponse := endpoint.PUT
+		assert.Nil(t, putResponse)
+
+		deleteResponse := endpoint.DELETE
+		assert.Nil(t, deleteResponse)
 	}
 }
