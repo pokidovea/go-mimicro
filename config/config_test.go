@@ -13,7 +13,6 @@ import (
 
 func TestSimpleConfig(t *testing.T) {
 	config := `
-collect_statistics: true
 servers:
 - name: server_1
   port: 4573
@@ -33,7 +32,6 @@ servers:
 	serverCollection, err := parseConfig([]byte(config))
 	assert.Nil(t, err)
 	assert.Equal(t, len(serverCollection.Servers), 1)
-	assert.True(t, serverCollection.CollectStatistics)
 
 	server := serverCollection.Servers[0]
 	assert.Equal(t, 4573, server.Port)
@@ -68,7 +66,6 @@ func TestResponseBodyFromFileByAbsolutePath(t *testing.T) {
 	filepath := path.Join(path.Dir(filename), "fixtures", "server_1_simple_response.json")
 
 	config := fmt.Sprintf(`
-collect_statistics: false
 servers:
 - name: server_1
   port: 4573
@@ -85,7 +82,6 @@ servers:
 	serverCollection, err := parseConfig([]byte(config))
 	assert.Nil(t, err)
 	assert.Equal(t, len(serverCollection.Servers), 1)
-	assert.False(t, serverCollection.CollectStatistics)
 
 	server := serverCollection.Servers[0]
 	assert.Equal(t, 4573, server.Port)
@@ -128,7 +124,6 @@ func TestResponseBodyFromFileByRelativePath(t *testing.T) {
 		fullFilePath := path.Join(path.Dir(settings.CONFIG_PATH), filepath)
 
 		config := fmt.Sprintf(`
-            collect_statistics: false
             servers:
             - name: server_1
               port: 4573
@@ -145,7 +140,6 @@ func TestResponseBodyFromFileByRelativePath(t *testing.T) {
 		serverCollection, err := parseConfig([]byte(config))
 		assert.Nil(t, err)
 		assert.Equal(t, len(serverCollection.Servers), 1)
-		assert.False(t, serverCollection.CollectStatistics)
 
 		server := serverCollection.Servers[0]
 		assert.Equal(t, 4573, server.Port)
@@ -190,7 +184,6 @@ func TestBinaryFile(t *testing.T) {
 	for _, ctype := range ctypes {
 		// server ignores status code from config while serving file. It's always 200
 		config := fmt.Sprintf(`
-        collect_statistics: false
         servers:
         - name: server_1
           port: 4573
@@ -208,7 +201,6 @@ func TestBinaryFile(t *testing.T) {
 		serverCollection, err := parseConfig([]byte(config))
 		assert.Nil(t, err)
 		assert.Equal(t, len(serverCollection.Servers), 1)
-		assert.False(t, serverCollection.CollectStatistics)
 
 		server := serverCollection.Servers[0]
 		assert.Equal(t, 4573, server.Port)
