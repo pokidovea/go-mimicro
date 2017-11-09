@@ -1,0 +1,13 @@
+collect_statistics: true
+servers:
+  - name: server_1
+    port: 4573
+    endpoints:
+      - url: /simple_url
+        GET:
+          body: file://./server_1_response_with_var.json
+          content_type: application/json
+        POST:
+          body: "OK"
+          content_type: text/plain
+          status_code: 201
