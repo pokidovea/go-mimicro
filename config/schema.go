@@ -58,7 +58,10 @@ var schema = `
             "additionalProperties": false,
             "required": ["template"],
             "properties": {
-                "template": {"type": "string"},
+                "template": {
+                    "type": "string",
+                    "minLength": 1
+                },
                 "content_type": {"type": "string"},
                 "status_code": {
                     "type": "integer",

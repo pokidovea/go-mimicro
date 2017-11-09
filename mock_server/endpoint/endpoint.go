@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/pokidovea/mimicro/mock_server/response"
 	"github.com/pokidovea/mimicro/statistics"
 )
@@ -46,8 +45,6 @@ func (endpoint Endpoint) GetHandler() func(w http.ResponseWriter, req *http.Requ
 			Url:        req.URL.String(),
 			Method:     req.Method,
 		}
-
-		vars := mux.Vars(req)
 
 		if response != nil {
 			response.WriteResponse(w, req)

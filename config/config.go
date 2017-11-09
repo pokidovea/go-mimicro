@@ -12,6 +12,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
+// MockServerCollection сontains a full configuration of servers
 type MockServerCollection struct {
 	CollectStatistics bool                     `json:"collect_statistics"`
 	Servers           []mock_server.MockServer `json:"servers"`
@@ -34,14 +35,13 @@ func validateSchema(data []byte) error {
 	if result.Valid() {
 		return nil
 
-	} else {
-		var errorString string
-		for _, desc := range result.Errors() {
-			errorString = fmt.Sprintf("%s%s\n", errorString, desc)
-		}
-
-		return errors.New(errorString)
 	}
+	var errorString string
+	for _, desc := range result.Errors() {
+		errorString = fmt.Sprintf("%s%s\n", errorString, desc)
+	}
+
+	return errors.New(errorString)
 }
 
 func parseConfig(data []byte) (*MockServerCollection, error) {
@@ -56,6 +56,8 @@ func parseConfig(data []byte) (*MockServerCollection, error) {
 	return &serverCollection, nil
 }
 
+// Load function loads the config from file into the MockServerCollection structure
+// Returns MockServerCollection structure
 func Load(configPath string) (*MockServerCollection, error) {
 	data, err := ioutil.ReadFile(configPath)
 
@@ -72,6 +74,7 @@ func Load(configPath string) (*MockServerCollection, error) {
 	return parseConfig(data)
 }
 
+// CheckConfig checks the json schema of pased config file
 func CheckConfig(configPath string) error {
 	data, err := ioutil.ReadFile(configPath)
 
