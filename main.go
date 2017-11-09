@@ -56,6 +56,9 @@ func main() {
 
 		statisticsCollector := statistics.Collector{Chan: statisticsChannel}
 		go statisticsCollector.Run(&wg)
+
+		wg.Add(1)
+		go statisticsCollector.Serve(8080, &wg)
 	}
 
 	for _, server := range serverCollection.Servers {
