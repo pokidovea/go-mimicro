@@ -22,12 +22,6 @@ type Request struct {
 	StatusCode int    `json:"status_code"`
 }
 
-type serverStatistic struct {
-	Url    string `json:"url"`
-	Method string `json:"method"`
-	Count  int    `json:"count"`
-}
-
 func (request Request) String() string {
 	return fmt.Sprintf(
 		"server: %s; url: %s; method: %s; response status: %d",
@@ -38,24 +32,33 @@ func (request Request) String() string {
 	)
 }
 
-type Collector struct {
+type serverStatistic struct {
+	Url    string `json:"url"`
+	Method string `json:"method"`
+	Count  int    `json:"count"`
+}
+
+type collector struct {
 	Chan     chan Request
 	requests map[Request]int
 }
 
-func (collector *Collector) Add(request Request) {
-	if collector.requests == nil {
-		collector.requests = make(map[Request]int)
-	}
+func NewCollector() *collector {
+	c := new(collector)
+	c.requests = make(map[Request]int)
+	c.Chan = make(chan Request)
+	return c
+}
+
+func (collector *collector) add(request Request) {
 	collector.requests[request]++
 }
 
-func (collector Collector) Get(request Request) int {
-	output := collector.requests[request]
-	return output
+func (collector collector) get(request Request) int {
+	return collector.requests[request]
 }
 
-func (collector *Collector) Run(wg *sync.WaitGroup) {
+func (collector *collector) Run(wg *sync.WaitGroup) {
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, os.Interrupt)
 
@@ -70,14 +73,14 @@ func (collector *Collector) Run(wg *sync.WaitGroup) {
 			if !ok {
 				return
 			}
-			collector.Add(request)
+			collector.add(request)
 		case <-signalChannel:
 			return
 		}
 	}
 }
 
-func (collector *Collector) getRequestStatistics(request *Request) []serverStatistic {
+func (collector *collector) getRequestStatistics(request *Request) []serverStatistic {
 	var statistics []serverStatistic
 
 	for collectedRequest, count := range collector.requests {
@@ -100,7 +103,7 @@ func (collector *Collector) getRequestStatistics(request *Request) []serverStati
 	return statistics
 }
 
-func (collector *Collector) ServerStatisticsAPIHandler(w http.ResponseWriter, req *http.Request) {
+func (collector *collector) ServerStatisticsAPIHandler(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	serverName := vars["serverName"]
 
@@ -118,9 +121,6 @@ func (collector *Collector) ServerStatisticsAPIHandler(w http.ResponseWriter, re
 	}
 
 	statistics := collector.getRequestStatistics(&request)
-	if len(statistics) == 0 {
-		statistics = make([]serverStatistic, 0)
-	}
 	payload, err := json.Marshal(statistics)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -132,7 +132,7 @@ func (collector *Collector) ServerStatisticsAPIHandler(w http.ResponseWriter, re
 	w.Write(payload)
 }
 
-func (collector *Collector) startHttpServer(port int) *http.Server {
+func (collector *collector) startHttpServer(port int) *http.Server {
 	router := mux.NewRouter()
 	router.HandleFunc("/servers/{serverName}", collector.ServerStatisticsAPIHandler)
 
@@ -153,7 +153,7 @@ func (collector *Collector) startHttpServer(port int) *http.Server {
 	return srv
 }
 
-func (collector *Collector) Serve(port int, wg *sync.WaitGroup) {
+func (collector *collector) Serve(port int, wg *sync.WaitGroup) {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 	defer close(interrupt)

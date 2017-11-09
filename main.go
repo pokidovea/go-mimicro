@@ -27,6 +27,7 @@ func main() {
 
 	configPath := flag.String("config", "", "a path to configuration file")
 	checkConf := flag.Bool("check", false, "validates passed config")
+	statisticsPort := flag.Int("statistics-port", 0, "starts statistics API server on a port")
 	flag.Parse()
 
 	err := checkConfig(*configPath)
@@ -49,16 +50,13 @@ func main() {
 	var wg sync.WaitGroup
 	var statisticsChannel chan statistics.Request
 
-	if serverCollection.CollectStatistics {
-		wg.Add(1)
+	if *statisticsPort != 0 {
+		wg.Add(2)
 
-		statisticsChannel = make(chan statistics.Request)
-
-		statisticsCollector := statistics.Collector{Chan: statisticsChannel}
+		statisticsCollector := statistics.NewCollector()
+		statisticsChannel = statisticsCollector.Chan
 		go statisticsCollector.Run(&wg)
-
-		wg.Add(1)
-		go statisticsCollector.Serve(8080, &wg)
+		go statisticsCollector.Serve(*statisticsPort, &wg)
 	}
 
 	for _, server := range serverCollection.Servers {

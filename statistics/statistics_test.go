@@ -10,20 +10,21 @@ import (
 )
 
 func TestCollection(t *testing.T) {
-	collector := new(Collector)
+	collector := NewCollector()
 	request := Request{
 		ServerName: "Simple server",
 		Url:        "/some_url",
 		Method:     "POST",
 	}
-	collector.Add(request)
-	collector.Add(request)
-	assert.Equal(t, 2, collector.Get(request))
+	collector.add(request)
+	collector.add(request)
+	assert.Equal(t, 2, collector.get(request))
 }
 
 func TestCollectionFromChannel(t *testing.T) {
 
-	collector := Collector{Chan: make(chan Request, 1)}
+	collector := NewCollector()
+	collector.Chan = make(chan Request, 1)
 	done := make(chan bool, 1)
 	defer close(done)
 
@@ -41,7 +42,7 @@ func TestCollectionFromChannel(t *testing.T) {
 	go collector.Run(&wg)
 	wg.Wait()
 
-	assert.Equal(t, 1, collector.Get(request))
+	assert.Equal(t, 1, collector.get(request))
 }
 
 func TestStringifyRequest(t *testing.T) {

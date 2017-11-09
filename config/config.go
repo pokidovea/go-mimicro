@@ -13,8 +13,7 @@ import (
 )
 
 type MockServerCollection struct {
-	CollectStatistics bool                     `json:"collect_statistics"`
-	Servers           []mock_server.MockServer `json:"servers"`
+	Servers []mock_server.MockServer `json:"servers"`
 }
 
 func validateSchema(data []byte) error {
