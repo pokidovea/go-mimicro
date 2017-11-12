@@ -1,4 +1,4 @@
-package config
+package mockServer
 
 import (
 	"errors"
@@ -7,14 +7,15 @@ import (
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
-	"github.com/pokidovea/mimicro/mock_server"
-	"github.com/pokidovea/mimicro/settings"
 	"github.com/xeipuuv/gojsonschema"
 )
 
-type MockServerCollection struct {
-	CollectStatistics bool                     `json:"collect_statistics"`
-	Servers           []mock_server.MockServer `json:"servers"`
+var configPath = ""
+
+// ServerCollection сontains a full configuration of servers
+type ServerCollection struct {
+	CollectStatistics bool         `json:"collect_statistics"`
+	Servers           []MockServer `json:"servers"`
 }
 
 func validateSchema(data []byte) error {
@@ -34,18 +35,17 @@ func validateSchema(data []byte) error {
 	if result.Valid() {
 		return nil
 
-	} else {
-		var errorString string
-		for _, desc := range result.Errors() {
-			errorString = fmt.Sprintf("%s%s\n", errorString, desc)
-		}
-
-		return errors.New(errorString)
 	}
+	var errorString string
+	for _, desc := range result.Errors() {
+		errorString = fmt.Sprintf("%s%s\n", errorString, desc)
+	}
+
+	return errors.New(errorString)
 }
 
-func parseConfig(data []byte) (*MockServerCollection, error) {
-	var serverCollection MockServerCollection
+func parseConfig(data []byte) (*ServerCollection, error) {
+	var serverCollection ServerCollection
 
 	err := yaml.Unmarshal(data, &serverCollection)
 
@@ -56,14 +56,16 @@ func parseConfig(data []byte) (*MockServerCollection, error) {
 	return &serverCollection, nil
 }
 
-func Load(configPath string) (*MockServerCollection, error) {
+// Load function loads the config from file into the ServerCollection structure
+// Returns ServerCollection structure
+func Load(configPath string) (*ServerCollection, error) {
 	data, err := ioutil.ReadFile(configPath)
 
 	if err != nil {
 		return nil, err
 	}
 
-	settings.CONFIG_PATH, err = filepath.Abs(configPath)
+	configPath, err = filepath.Abs(configPath)
 
 	if err != nil {
 		return nil, err
@@ -72,6 +74,7 @@ func Load(configPath string) (*MockServerCollection, error) {
 	return parseConfig(data)
 }
 
+// CheckConfig checks the json schema of pased config file
 func CheckConfig(configPath string) error {
 	data, err := ioutil.ReadFile(configPath)
 

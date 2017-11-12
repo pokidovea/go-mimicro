@@ -1,32 +1,35 @@
-package endpoint
+package mockServer
 
 import (
 	"log"
 	"net/http"
 
-	"github.com/pokidovea/mimicro/mock_server/response"
 	"github.com/pokidovea/mimicro/statistics"
 )
 
+// Endpoint represents an URL, wich accepts one ore several types of requests
 type Endpoint struct {
 	statisticsChannel chan statistics.Request
 	serverName        string
-	Url               string             `json:"url"`
-	GET               *response.Response `json:"GET"`
-	POST              *response.Response `json:"POST"`
-	PATCH             *response.Response `json:"PATCH"`
-	PUT               *response.Response `json:"PUT"`
-	DELETE            *response.Response `json:"DELETE"`
+	URL               string    `json:"url"`
+	GET               *Response `json:"GET"`
+	POST              *Response `json:"POST"`
+	PATCH             *Response `json:"PATCH"`
+	PUT               *Response `json:"PUT"`
+	DELETE            *Response `json:"DELETE"`
 }
 
+// CollectStatistics sets statisticsChannel and serverName for the endpoint
+// TODO: Give better name for this function
 func (endpoint *Endpoint) CollectStatistics(statisticsChannel chan statistics.Request, serverName string) {
 	endpoint.statisticsChannel = statisticsChannel
 	endpoint.serverName = serverName
 }
 
+// GetHandler returns a function to register it as handler in mux
 func (endpoint Endpoint) GetHandler() func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		var response *response.Response
+		var response *Response
 
 		if req.Method == "GET" && endpoint.GET != nil {
 			response = endpoint.GET
@@ -42,7 +45,7 @@ func (endpoint Endpoint) GetHandler() func(w http.ResponseWriter, req *http.Requ
 
 		statisticsRequest := statistics.Request{
 			ServerName: endpoint.serverName,
-			Url:        endpoint.Url,
+			Url:        req.URL.String(),
 			Method:     req.Method,
 		}
 

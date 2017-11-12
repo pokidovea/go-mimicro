@@ -7,20 +7,20 @@ import (
 	"os"
 	"sync"
 
-	"github.com/pokidovea/mimicro/config"
+	"github.com/pokidovea/mimicro/mockServer"
 	"github.com/pokidovea/mimicro/statistics"
 )
 
 func checkConfig(configPath string) error {
-	err := config.CheckConfig(configPath)
+	err := mockServer.CheckConfig(configPath)
 
 	if err == nil {
 		fmt.Println("Config is valid")
 		return nil
-	} else {
-		fmt.Printf("Config is not valid. See errors below: \n %s \n", err.Error())
-		return err
 	}
+
+	fmt.Printf("Config is not valid. See errors below: \n %s \n", err.Error())
+	return err
 }
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	serverCollection, err := config.Load(*configPath)
+	serverCollection, err := mockServer.Load(*configPath)
 
 	if err != nil {
 		log.Printf(err.Error())
