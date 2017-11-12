@@ -14,13 +14,14 @@ import (
 	"github.com/pokidovea/mimicro/statistics"
 )
 
+// MockServer represents a standalone server with its name, port and collection of endpoints
 type MockServer struct {
 	Name      string     `json:"name"`
 	Port      int        `json:"port"`
 	Endpoints []Endpoint `json:"endpoints"`
 }
 
-func (mockServer MockServer) startHttpServer(statisticsChannel chan statistics.Request) *http.Server {
+func (mockServer MockServer) startHTTPServer(statisticsChannel chan statistics.Request) *http.Server {
 	router := mux.NewRouter()
 
 	for _, endpoint := range mockServer.Endpoints {
@@ -45,13 +46,14 @@ func (mockServer MockServer) startHttpServer(statisticsChannel chan statistics.R
 	return srv
 }
 
+// Serve method starts the server and does some operations after it stops
 func (mockServer MockServer) Serve(statisticsChannel chan statistics.Request, wg *sync.WaitGroup) {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 	defer close(interrupt)
 	defer signal.Stop(interrupt)
 
-	srv := mockServer.startHttpServer(statisticsChannel)
+	srv := mockServer.startHTTPServer(statisticsChannel)
 	<-interrupt
 
 	log.Printf("[%s] Stopping a server...", mockServer.Name)

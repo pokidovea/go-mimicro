@@ -15,11 +15,11 @@ func createEndpoint() Endpoint {
 	str := `{
         "url": "/simple_url",
         "GET": {
-            "body": "{}",
+            "template": "{}",
             "content_type": "application/json"
         },
         "POST": {
-            "body": "OK",
+            "template": "OK",
             "status_code": 201
         }
     }`

@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/pokidovea/mimicro/settings"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,10 +19,10 @@ servers:
   endpoints:
     - url: /simple_url
       GET:
-        body: "{}"
+        template: "{}"
         content_type: application/json
       POST:
-        body: "OK"
+        template: "OK"
         status_code: 201
     `
 
@@ -44,12 +43,12 @@ servers:
 	assert.Equal(t, "/simple_url", endpoint.Url)
 
 	getResponse := endpoint.GET
-	assert.Equal(t, "{}", getResponse.Body)
+	assert.NotNil(t, getResponse.template)
 	assert.Equal(t, "application/json", getResponse.ContentType)
 	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
 	postResponse := endpoint.POST
-	assert.Equal(t, "OK", postResponse.Body)
+	assert.NotNil(t, postResponse.template)
 	assert.Equal(t, "text/plain", postResponse.ContentType)
 	assert.Equal(t, http.StatusCreated, postResponse.StatusCode)
 
@@ -65,7 +64,7 @@ servers:
 
 func TestResponseBodyFromFileByAbsolutePath(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	filepath := path.Join(path.Dir(filename), "fixtures", "server_1_simple_response.json")
+	filepath := path.Join(path.Dir(filename), "..", "examples", "response_with_var.json")
 
 	config := fmt.Sprintf(`
 collect_statistics: false
@@ -75,7 +74,7 @@ servers:
   endpoints:
     - url: /response_from_file
       GET:
-        body: file://%s
+        file: file://%s
         content_type: application/json
     `, filepath)
 
@@ -96,7 +95,7 @@ servers:
 	assert.Equal(t, "/response_from_file", endpoint.Url)
 
 	getResponse := endpoint.GET
-	assert.Equal(t, filepath, getResponse.Body)
+	assert.Equal(t, filepath, getResponse.file)
 	assert.Equal(t, "application/json", getResponse.ContentType)
 	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
@@ -115,17 +114,17 @@ servers:
 
 func TestResponseBodyFromFileByRelativePath(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	settings.CONFIG_PATH = path.Join(path.Dir(filename), "fixtures", "config.yaml")
+	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
 
 	cases := []string{
-		"./server_1_simple_response.json",
-		"../fixtures/server_1_simple_response.json",
-		"../../config/fixtures/server_1_simple_response.json",
-		"server_1_simple_response.json",
+		"./response_with_var.json",
+		"../examples/response_with_var.json",
+		"../../mimicro/examples/response_with_var.json",
+		"response_with_var.json",
 	}
 
 	for _, filepath := range cases {
-		fullFilePath := path.Join(path.Dir(settings.CONFIG_PATH), filepath)
+		fullFilePath := path.Join(path.Dir(configPath), filepath)
 
 		config := fmt.Sprintf(`
             collect_statistics: false
@@ -135,7 +134,7 @@ func TestResponseBodyFromFileByRelativePath(t *testing.T) {
               endpoints:
                 - url: /response_from_file
                   GET:
-                    body: file://%s
+                    file: file://%s
                     content_type: application/json
         `, filepath)
 
@@ -157,7 +156,7 @@ func TestResponseBodyFromFileByRelativePath(t *testing.T) {
 
 		getResponse := endpoint.GET
 
-		assert.Equal(t, fullFilePath, getResponse.Body)
+		assert.Equal(t, fullFilePath, getResponse.file)
 		assert.Equal(t, "application/json", getResponse.ContentType)
 		assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
@@ -177,9 +176,9 @@ func TestResponseBodyFromFileByRelativePath(t *testing.T) {
 
 func TestBinaryFile(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	settings.CONFIG_PATH = path.Join(path.Dir(filename), "fixtures", "config.yaml")
+	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
 	filepath := "mimicro.png"
-	fullFilePath := path.Join(path.Dir(settings.CONFIG_PATH), filepath)
+	fullFilePath := path.Join(path.Dir(configPath), filepath)
 
 	// we can set any content type for binary file, but if it is empty, it is autodetected while serving
 	ctypes := []string{
@@ -197,8 +196,8 @@ func TestBinaryFile(t *testing.T) {
           endpoints:
             - url: /get_picture
               GET:
-                body: file://%s
-                status_code: 201
+                file: file://%s
+                status_code: 200
                 content_type: "%s"
             `, filepath, ctype)
 
@@ -219,7 +218,7 @@ func TestBinaryFile(t *testing.T) {
 		assert.Equal(t, "/get_picture", endpoint.Url)
 
 		getResponse := endpoint.GET
-		assert.Equal(t, fullFilePath, getResponse.Body)
+		assert.Equal(t, fullFilePath, getResponse.file)
 		assert.Equal(t, ctype, getResponse.ContentType)
 		assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 

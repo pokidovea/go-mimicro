@@ -17,10 +17,10 @@ func checkConfig(configPath string) error {
 	if err == nil {
 		fmt.Println("Config is valid")
 		return nil
-	} else {
-		fmt.Printf("Config is not valid. See errors below: \n %s \n", err.Error())
-		return err
 	}
+
+	fmt.Printf("Config is not valid. See errors below: \n %s \n", err.Error())
+	return err
 }
 
 func main() {

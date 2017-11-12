@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
-	"github.com/pokidovea/mimicro/settings"
 	"github.com/xeipuuv/gojsonschema"
 )
+
+var configPath = ""
 
 // ServerCollection сontains a full configuration of servers
 type ServerCollection struct {
@@ -64,7 +65,7 @@ func Load(configPath string) (*ServerCollection, error) {
 		return nil, err
 	}
 
-	settings.CONFIG_PATH, err = filepath.Abs(configPath)
+	configPath, err = filepath.Abs(configPath)
 
 	if err != nil {
 		return nil, err

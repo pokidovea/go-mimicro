@@ -12,7 +12,6 @@ import (
 	"text/template"
 
 	"github.com/gorilla/mux"
-	"github.com/pokidovea/mimicro/settings"
 )
 
 const filePathRegexp = `^file:\/\/[\/\w\.]*$`
@@ -89,7 +88,7 @@ func processFilePath(filePath string) (string, error) {
 	filePath = strings.Replace(filePath, "file://", "", -1)
 
 	if filePath[0] != '/' {
-		configFolder := path.Dir(settings.CONFIG_PATH)
+		configFolder := path.Dir(configPath)
 		filePath = path.Join(configFolder, filePath)
 	}
 
