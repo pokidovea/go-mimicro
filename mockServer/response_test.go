@@ -195,3 +195,20 @@ func TestUnmarshalBinaryFile(t *testing.T) {
 		assert.Equal(t, http.StatusOK, response.StatusCode)
 	}
 }
+
+func TestUnmarshalNonexistingFileOrTemplate(t *testing.T) {
+	cases := []string{
+		"template",
+		"file",
+	}
+
+	var response Response
+
+	for _, field := range cases {
+		config := fmt.Sprintf(`%s: file:///wrong_file`, field)
+
+		err := yaml.Unmarshal([]byte(config), &response)
+		assert.NotNil(t, err)
+		assert.Equal(t, "error unmarshaling JSON: File does not exist /wrong_file", err.Error())
+	}
+}
