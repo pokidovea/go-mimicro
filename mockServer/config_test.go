@@ -40,7 +40,7 @@ servers:
 	assert.Equal(t, 1, len(server.Endpoints))
 
 	endpoint := server.Endpoints[0]
-	assert.Equal(t, "/simple_url", endpoint.Url)
+	assert.Equal(t, "/simple_url", endpoint.URL)
 
 	getResponse := endpoint.GET
 	assert.NotNil(t, getResponse.template)
@@ -92,7 +92,7 @@ servers:
 	assert.Equal(t, 1, len(server.Endpoints))
 
 	endpoint := server.Endpoints[0]
-	assert.Equal(t, "/response_from_file", endpoint.Url)
+	assert.Equal(t, "/response_from_file", endpoint.URL)
 
 	getResponse := endpoint.GET
 	assert.Equal(t, filepath, getResponse.file)
@@ -152,7 +152,7 @@ func TestResponseBodyFromFileByRelativePath(t *testing.T) {
 		assert.Equal(t, 1, len(server.Endpoints))
 
 		endpoint := server.Endpoints[0]
-		assert.Equal(t, "/response_from_file", endpoint.Url)
+		assert.Equal(t, "/response_from_file", endpoint.URL)
 
 		getResponse := endpoint.GET
 
@@ -215,7 +215,7 @@ func TestBinaryFile(t *testing.T) {
 		assert.Equal(t, 1, len(server.Endpoints))
 
 		endpoint := server.Endpoints[0]
-		assert.Equal(t, "/get_picture", endpoint.Url)
+		assert.Equal(t, "/get_picture", endpoint.URL)
 
 		getResponse := endpoint.GET
 		assert.Equal(t, fullFilePath, getResponse.file)
