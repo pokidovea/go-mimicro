@@ -1,7 +1,6 @@
 package mockServer
 
 import (
-	"fmt"
 	"net/http"
 	"path"
 	"runtime"
@@ -10,26 +9,48 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSimpleConfig(t *testing.T) {
-	config := `
-collect_statistics: true
-servers:
-- name: server_1
-  port: 4573
-  endpoints:
-    - url: /simple_url
-      GET:
-        template: "{}"
-        content_type: application/json
-      POST:
-        template: "OK"
-        status_code: 201
-    `
+func TestValidateCorrectConfigFromFile(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
+	err := CheckConfig(configPath)
 
-	err := validateSchema([]byte(config))
 	assert.Nil(t, err)
+}
 
-	serverCollection, err := parseConfig([]byte(config))
+func TestValidateNonexistingConfigFile(t *testing.T) {
+	err := CheckConfig("/wrong_file.yaml")
+
+	assert.NotNil(t, err)
+	assert.Equal(t, "open /wrong_file.yaml: no such file or directory", err.Error())
+}
+
+func TestValidateWrongConfig(t *testing.T) {
+	config := `
+servers:
+  - name: server_1
+    port: 4573
+    endpoints:
+      - url: /simple_url
+        GET:
+          template: "{}"
+          content_type: application/json
+          status_code: "201"
+    `
+	expectedError := `servers.0.endpoints.0.GET: Must validate one and only one schema (oneOf)
+servers.0.endpoints.0.GET.status_code: Invalid type. Expected: integer, given: string
+`
+	err := validateSchema([]byte(config))
+
+	assert.NotNil(t, err)
+	assert.Equal(t, expectedError, err.Error())
+}
+
+func TestLoadConfigFromFile(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
+
+	serverCollection, err := Load(configPath)
+
 	assert.Nil(t, err)
 	assert.Equal(t, len(serverCollection.Servers), 1)
 	assert.True(t, serverCollection.CollectStatistics)
@@ -37,18 +58,21 @@ servers:
 	server := serverCollection.Servers[0]
 	assert.Equal(t, 4573, server.Port)
 	assert.Equal(t, "server_1", server.Name)
-	assert.Equal(t, 1, len(server.Endpoints))
+	assert.Equal(t, 4, len(server.Endpoints))
 
+	// endpoint 0
 	endpoint := server.Endpoints[0]
 	assert.Equal(t, "/simple_url", endpoint.URL)
 
 	getResponse := endpoint.GET
 	assert.NotNil(t, getResponse.template)
+	assert.Equal(t, "", getResponse.file)
 	assert.Equal(t, "application/json", getResponse.ContentType)
 	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
 	postResponse := endpoint.POST
 	assert.NotNil(t, postResponse.template)
+	assert.Equal(t, "", getResponse.file)
 	assert.Equal(t, "text/plain", postResponse.ContentType)
 	assert.Equal(t, http.StatusCreated, postResponse.StatusCode)
 
@@ -60,178 +84,70 @@ servers:
 
 	deleteResponse := endpoint.DELETE
 	assert.Nil(t, deleteResponse)
-}
 
-func TestResponseBodyFromFileByAbsolutePath(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	filepath := path.Join(path.Dir(filename), "..", "examples", "response_with_var.json")
+	// endpoint 1
+	endpoint = server.Endpoints[1]
+	assert.Equal(t, "/picture", endpoint.URL)
 
-	config := fmt.Sprintf(`
-collect_statistics: false
-servers:
-- name: server_1
-  port: 4573
-  endpoints:
-    - url: /response_from_file
-      GET:
-        file: file://%s
-        content_type: application/json
-    `, filepath)
-
-	err := validateSchema([]byte(config))
-	assert.Nil(t, err)
-
-	serverCollection, err := parseConfig([]byte(config))
-	assert.Nil(t, err)
-	assert.Equal(t, len(serverCollection.Servers), 1)
-	assert.False(t, serverCollection.CollectStatistics)
-
-	server := serverCollection.Servers[0]
-	assert.Equal(t, 4573, server.Port)
-	assert.Equal(t, "server_1", server.Name)
-	assert.Equal(t, 1, len(server.Endpoints))
-
-	endpoint := server.Endpoints[0]
-	assert.Equal(t, "/response_from_file", endpoint.URL)
-
-	getResponse := endpoint.GET
-	assert.Equal(t, filepath, getResponse.file)
-	assert.Equal(t, "application/json", getResponse.ContentType)
+	getResponse = endpoint.GET
+	assert.Nil(t, getResponse.template)
+	assert.Equal(t, path.Join(path.Dir(configPath), "mimicro.png"), getResponse.file)
+	assert.Equal(t, "", getResponse.ContentType)
 	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
-	postResponse := endpoint.POST
+	postResponse = endpoint.POST
 	assert.Nil(t, postResponse)
 
-	patchResponse := endpoint.PATCH
+	patchResponse = endpoint.PATCH
 	assert.Nil(t, patchResponse)
 
-	putResponse := endpoint.PUT
+	putResponse = endpoint.PUT
 	assert.Nil(t, putResponse)
 
-	deleteResponse := endpoint.DELETE
+	deleteResponse = endpoint.DELETE
 	assert.Nil(t, deleteResponse)
-}
 
-func TestResponseBodyFromFileByRelativePath(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
+	// endpoint 2
+	endpoint = server.Endpoints[2]
+	assert.Equal(t, "/template_from_file/{var}", endpoint.URL)
 
-	cases := []string{
-		"./response_with_var.json",
-		"../examples/response_with_var.json",
-		"../../mimicro/examples/response_with_var.json",
-		"response_with_var.json",
-	}
+	getResponse = endpoint.GET
+	assert.Nil(t, getResponse)
 
-	for _, filepath := range cases {
-		fullFilePath := path.Join(path.Dir(configPath), filepath)
+	postResponse = endpoint.POST
+	assert.Nil(t, postResponse)
 
-		config := fmt.Sprintf(`
-            collect_statistics: false
-            servers:
-            - name: server_1
-              port: 4573
-              endpoints:
-                - url: /response_from_file
-                  GET:
-                    file: file://%s
-                    content_type: application/json
-        `, filepath)
+	patchResponse = endpoint.PATCH
+	assert.Nil(t, patchResponse)
 
-		err := validateSchema([]byte(config))
-		assert.Nil(t, err)
+	putResponse = endpoint.PUT
+	assert.NotNil(t, putResponse.template)
+	assert.Equal(t, "", putResponse.file)
+	assert.Equal(t, "application/json", putResponse.ContentType)
+	assert.Equal(t, http.StatusOK, putResponse.StatusCode)
 
-		serverCollection, err := parseConfig([]byte(config))
-		assert.Nil(t, err)
-		assert.Equal(t, len(serverCollection.Servers), 1)
-		assert.False(t, serverCollection.CollectStatistics)
+	deleteResponse = endpoint.DELETE
+	assert.Nil(t, deleteResponse)
 
-		server := serverCollection.Servers[0]
-		assert.Equal(t, 4573, server.Port)
-		assert.Equal(t, "server_1", server.Name)
-		assert.Equal(t, 1, len(server.Endpoints))
+	// endpoint 3
+	endpoint = server.Endpoints[3]
+	assert.Equal(t, "/string_template/{var}", endpoint.URL)
 
-		endpoint := server.Endpoints[0]
-		assert.Equal(t, "/response_from_file", endpoint.URL)
+	getResponse = endpoint.GET
+	assert.Nil(t, getResponse)
 
-		getResponse := endpoint.GET
+	postResponse = endpoint.POST
+	assert.Nil(t, postResponse)
 
-		assert.Equal(t, fullFilePath, getResponse.file)
-		assert.Equal(t, "application/json", getResponse.ContentType)
-		assert.Equal(t, http.StatusOK, getResponse.StatusCode)
+	patchResponse = endpoint.PATCH
+	assert.Nil(t, patchResponse)
 
-		postResponse := endpoint.POST
-		assert.Nil(t, postResponse)
+	putResponse = endpoint.PUT
+	assert.Nil(t, putResponse)
 
-		patchResponse := endpoint.PATCH
-		assert.Nil(t, patchResponse)
-
-		putResponse := endpoint.PUT
-		assert.Nil(t, putResponse)
-
-		deleteResponse := endpoint.DELETE
-		assert.Nil(t, deleteResponse)
-	}
-}
-
-func TestBinaryFile(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
-	filepath := "mimicro.png"
-	fullFilePath := path.Join(path.Dir(configPath), filepath)
-
-	// we can set any content type for binary file, but if it is empty, it is autodetected while serving
-	ctypes := []string{
-		"",
-		"application/json",
-	}
-
-	for _, ctype := range ctypes {
-		// server ignores status code from config while serving file. It's always 200
-		config := fmt.Sprintf(`
-        collect_statistics: false
-        servers:
-        - name: server_1
-          port: 4573
-          endpoints:
-            - url: /get_picture
-              GET:
-                file: file://%s
-                status_code: 200
-                content_type: "%s"
-            `, filepath, ctype)
-
-		err := validateSchema([]byte(config))
-		assert.Nil(t, err)
-
-		serverCollection, err := parseConfig([]byte(config))
-		assert.Nil(t, err)
-		assert.Equal(t, len(serverCollection.Servers), 1)
-		assert.False(t, serverCollection.CollectStatistics)
-
-		server := serverCollection.Servers[0]
-		assert.Equal(t, 4573, server.Port)
-		assert.Equal(t, "server_1", server.Name)
-		assert.Equal(t, 1, len(server.Endpoints))
-
-		endpoint := server.Endpoints[0]
-		assert.Equal(t, "/get_picture", endpoint.URL)
-
-		getResponse := endpoint.GET
-		assert.Equal(t, fullFilePath, getResponse.file)
-		assert.Equal(t, ctype, getResponse.ContentType)
-		assert.Equal(t, http.StatusOK, getResponse.StatusCode)
-
-		postResponse := endpoint.POST
-		assert.Nil(t, postResponse)
-
-		patchResponse := endpoint.PATCH
-		assert.Nil(t, patchResponse)
-
-		putResponse := endpoint.PUT
-		assert.Nil(t, putResponse)
-
-		deleteResponse := endpoint.DELETE
-		assert.Nil(t, deleteResponse)
-	}
+	deleteResponse = endpoint.DELETE
+	assert.NotNil(t, deleteResponse.template)
+	assert.Equal(t, "", deleteResponse.file)
+	assert.Equal(t, "text/plain", deleteResponse.ContentType)
+	assert.Equal(t, http.StatusForbidden, deleteResponse.StatusCode)
 }

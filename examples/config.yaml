@@ -14,7 +14,11 @@ servers:
       - url: /picture
         GET:
           file: file://mimicro.png
-      - url: /url/with/{var}
-        GET:
+      - url: /template_from_file/{var}
+        PUT:
           template: file://response_with_var.json
           content_type: application/json
+      - url: /string_template/{var}
+        DELETE:
+          template: "var is {{.var}}"
+          status_code: 403
