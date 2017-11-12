@@ -11,14 +11,13 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pokidovea/mimicro/mock_server/endpoint"
 	"github.com/pokidovea/mimicro/statistics"
 )
 
 type MockServer struct {
-	Name      string              `json:"name"`
-	Port      int                 `json:"port"`
-	Endpoints []endpoint.Endpoint `json:"endpoints"`
+	Name      string     `json:"name"`
+	Port      int        `json:"port"`
+	Endpoints []Endpoint `json:"endpoints"`
 }
 
 func (mockServer MockServer) startHttpServer(statisticsChannel chan statistics.Request) *http.Server {
