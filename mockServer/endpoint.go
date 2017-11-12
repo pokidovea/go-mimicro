@@ -1,22 +1,21 @@
-package endpoint
+package mockServer
 
 import (
 	"log"
 	"net/http"
 
-	"github.com/pokidovea/mimicro/mock_server/response"
 	"github.com/pokidovea/mimicro/statistics"
 )
 
 type Endpoint struct {
 	statisticsChannel chan statistics.Request
 	serverName        string
-	Url               string             `json:"url"`
-	GET               *response.Response `json:"GET"`
-	POST              *response.Response `json:"POST"`
-	PATCH             *response.Response `json:"PATCH"`
-	PUT               *response.Response `json:"PUT"`
-	DELETE            *response.Response `json:"DELETE"`
+	Url               string    `json:"url"`
+	GET               *Response `json:"GET"`
+	POST              *Response `json:"POST"`
+	PATCH             *Response `json:"PATCH"`
+	PUT               *Response `json:"PUT"`
+	DELETE            *Response `json:"DELETE"`
 }
 
 func (endpoint *Endpoint) CollectStatistics(statisticsChannel chan statistics.Request, serverName string) {
@@ -26,7 +25,7 @@ func (endpoint *Endpoint) CollectStatistics(statisticsChannel chan statistics.Re
 
 func (endpoint Endpoint) GetHandler() func(w http.ResponseWriter, req *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		var response *response.Response
+		var response *Response
 
 		if req.Method == "GET" && endpoint.GET != nil {
 			response = endpoint.GET

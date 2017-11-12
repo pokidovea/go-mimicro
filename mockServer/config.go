@@ -1,4 +1,4 @@
-package config
+package mockServer
 
 import (
 	"errors"
@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
-	"github.com/pokidovea/mimicro/mock_server"
 	"github.com/pokidovea/mimicro/settings"
 	"github.com/xeipuuv/gojsonschema"
 )

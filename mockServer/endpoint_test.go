@@ -1,4 +1,4 @@
-package endpoint
+package mockServer
 
 import (
 	"encoding/json"

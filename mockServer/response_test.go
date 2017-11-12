@@ -1,4 +1,4 @@
-package response
+package mockServer
 
 import (
 	"io/ioutil"
