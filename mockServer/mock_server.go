@@ -26,7 +26,7 @@ func (mockServer MockServer) startHTTPServer(statisticsChannel chan statistics.R
 
 	for _, endpoint := range mockServer.Endpoints {
 		endpoint.CollectStatistics(statisticsChannel, mockServer.Name)
-		router.HandleFunc(endpoint.Url, endpoint.GetHandler())
+		router.HandleFunc(endpoint.URL, endpoint.GetHandler())
 	}
 
 	srv := &http.Server{
