@@ -11,7 +11,7 @@ import (
 
 func TestValidateCorrectConfigFromFile(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
+	configPath := path.Join(path.Dir(filename), "..", "examples", "config.yaml")
 	err := CheckConfig(configPath)
 
 	assert.Nil(t, err)
@@ -47,7 +47,7 @@ servers.0.endpoints.0.GET.status_code: Invalid type. Expected: integer, given: s
 
 func TestLoadConfigFromFile(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
+	configPath := path.Join(path.Dir(filename), "..", "examples", "config.yaml")
 
 	serverCollection, err := Load(configPath)
 

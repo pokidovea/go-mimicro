@@ -198,7 +198,7 @@ status_code: 201
 
 func TestUnmarshalTemplateFile(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
+	ConfigPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
 
 	cases := []string{
 		path.Join(path.Dir(filename), "..", "examples", "response_with_var.json"), // absolute path
@@ -228,7 +228,7 @@ func TestUnmarshalTemplateFile(t *testing.T) {
 
 func TestUnmarshalBinaryFile(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
+	ConfigPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
 	absoluteFilePath := path.Join(path.Dir(filename), "..", "examples", "mimicro.png")
 
 	cases := []string{
