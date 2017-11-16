@@ -10,7 +10,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
-var configPath = ""
+var ConfigPath = ""
 
 // ServerCollection сontains a full configuration of servers
 type ServerCollection struct {
@@ -65,7 +65,7 @@ func Load(configPath string) (*ServerCollection, error) {
 		return nil, err
 	}
 
-	configPath, err = filepath.Abs(configPath)
+	ConfigPath, err = filepath.Abs(configPath)
 
 	if err != nil {
 		return nil, err

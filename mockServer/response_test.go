@@ -133,6 +133,30 @@ func TestWriteFileResponseWithVarInPath(t *testing.T) {
 	assert.Equal(t, fileContent, body)
 }
 
+func TestWriteFileResponseWhenFileDoesNotExist(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	filepath := path.Join(path.Dir(filename), "..", "examples", "{{.var}}micro.png")
+
+	tmpl := template.New("template")
+	tmpl.Parse(filepath)
+
+	response := Response{nil, tmpl, "", http.StatusOK}
+	router := mux.NewRouter()
+	router.HandleFunc("/{var}/in/filepath", response.WriteResponse)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/ne/in/filepath", nil)
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	assert.Equal(t, "text/plain; charset=utf-8", resp.Header.Get("Content-Type"))
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	assert.Equal(t, "404 page not found\n", string(body))
+}
+
 func createResponseFromConfig(config string) Response {
 	var response Response
 	err := yaml.Unmarshal([]byte(config), &response)

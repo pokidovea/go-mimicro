@@ -93,7 +93,7 @@ func processFilePath(filePath string, checkExistence bool) (string, error) {
 	filePath = strings.Replace(filePath, "file://", "", -1)
 
 	if filePath[0] != '/' {
-		configFolder := path.Dir(configPath)
+		configFolder := path.Dir(ConfigPath)
 		filePath = path.Join(configFolder, filePath)
 	}
 
