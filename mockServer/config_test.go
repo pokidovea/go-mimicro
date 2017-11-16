@@ -58,7 +58,7 @@ func TestLoadConfigFromFile(t *testing.T) {
 	server := serverCollection.Servers[0]
 	assert.Equal(t, 4573, server.Port)
 	assert.Equal(t, "server_1", server.Name)
-	assert.Equal(t, 4, len(server.Endpoints))
+	assert.Equal(t, 5, len(server.Endpoints))
 
 	// endpoint 0
 	endpoint := server.Endpoints[0]
@@ -66,13 +66,13 @@ func TestLoadConfigFromFile(t *testing.T) {
 
 	getResponse := endpoint.GET
 	assert.NotNil(t, getResponse.template)
-	assert.Equal(t, "", getResponse.file)
+	assert.Nil(t, getResponse.file)
 	assert.Equal(t, "application/json", getResponse.ContentType)
 	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
 	postResponse := endpoint.POST
 	assert.NotNil(t, postResponse.template)
-	assert.Equal(t, "", getResponse.file)
+	assert.Nil(t, postResponse.file)
 	assert.Equal(t, "text/plain", postResponse.ContentType)
 	assert.Equal(t, http.StatusCreated, postResponse.StatusCode)
 
@@ -91,7 +91,7 @@ func TestLoadConfigFromFile(t *testing.T) {
 
 	getResponse = endpoint.GET
 	assert.Nil(t, getResponse.template)
-	assert.Equal(t, path.Join(path.Dir(configPath), "mimicro.png"), getResponse.file)
+	assert.NotNil(t, getResponse.file)
 	assert.Equal(t, "", getResponse.ContentType)
 	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
@@ -109,6 +109,28 @@ func TestLoadConfigFromFile(t *testing.T) {
 
 	// endpoint 2
 	endpoint = server.Endpoints[2]
+	assert.Equal(t, "/{var}/in/filepath", endpoint.URL)
+
+	getResponse = endpoint.GET
+	assert.Nil(t, getResponse.template)
+	assert.NotNil(t, getResponse.file)
+	assert.Equal(t, "", getResponse.ContentType)
+	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
+
+	postResponse = endpoint.POST
+	assert.Nil(t, postResponse)
+
+	patchResponse = endpoint.PATCH
+	assert.Nil(t, patchResponse)
+
+	putResponse = endpoint.PUT
+	assert.Nil(t, putResponse)
+
+	deleteResponse = endpoint.DELETE
+	assert.Nil(t, deleteResponse)
+
+	// endpoint 3
+	endpoint = server.Endpoints[3]
 	assert.Equal(t, "/template_from_file/{var}", endpoint.URL)
 
 	getResponse = endpoint.GET
@@ -122,15 +144,15 @@ func TestLoadConfigFromFile(t *testing.T) {
 
 	putResponse = endpoint.PUT
 	assert.NotNil(t, putResponse.template)
-	assert.Equal(t, "", putResponse.file)
+	assert.Nil(t, putResponse.file)
 	assert.Equal(t, "application/json", putResponse.ContentType)
 	assert.Equal(t, http.StatusOK, putResponse.StatusCode)
 
 	deleteResponse = endpoint.DELETE
 	assert.Nil(t, deleteResponse)
 
-	// endpoint 3
-	endpoint = server.Endpoints[3]
+	// endpoint 4
+	endpoint = server.Endpoints[4]
 	assert.Equal(t, "/string_template/{var}", endpoint.URL)
 
 	getResponse = endpoint.GET
@@ -147,7 +169,7 @@ func TestLoadConfigFromFile(t *testing.T) {
 
 	deleteResponse = endpoint.DELETE
 	assert.NotNil(t, deleteResponse.template)
-	assert.Equal(t, "", deleteResponse.file)
+	assert.Nil(t, deleteResponse.file)
 	assert.Equal(t, "text/plain", deleteResponse.ContentType)
 	assert.Equal(t, http.StatusForbidden, deleteResponse.StatusCode)
 }

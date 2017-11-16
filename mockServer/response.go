@@ -1,6 +1,7 @@
 package mockServer
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -19,7 +20,7 @@ const filePathRegexp = `^file:\/\/[\/\w\.]*$`
 // Response struct contains the information about response, such as content, ctype, status code etc.
 type Response struct {
 	template    *template.Template
-	file        string
+	file        *template.Template
 	ContentType string `json:"content_type"`
 	StatusCode  int    `json:"status_code"`
 }
@@ -56,7 +57,7 @@ func (response *Response) UnmarshalJSON(data []byte) error {
 		response.ContentType = val.(string)
 	}
 
-	if val, ok := m["status_code"]; !ok || response.file != "" {
+	if val, ok := m["status_code"]; !ok || response.file != nil {
 		response.StatusCode = http.StatusOK
 	} else {
 		response.StatusCode = int(val.(float64))
@@ -71,20 +72,24 @@ func (response *Response) WriteResponse(w http.ResponseWriter, req *http.Request
 		w.Header().Set("Content-Type", response.ContentType)
 	}
 
+	vars := mux.Vars(req)
+
 	if response.template != nil {
 		w.WriteHeader(response.StatusCode)
 
-		vars := mux.Vars(req)
-		err := response.template.Execute(w, vars)
-		if err != nil {
+		if err := response.template.Execute(w, vars); err != nil {
 			fmt.Fprintf(w, err.Error())
 		}
 	} else {
-		http.ServeFile(w, req, response.file)
+		filePath := bytes.NewBufferString("")
+		if err := response.file.Execute(filePath, vars); err != nil {
+			fmt.Fprintf(w, err.Error())
+		}
+		http.ServeFile(w, req, filePath.String())
 	}
 }
 
-func processFilePath(filePath string) (string, error) {
+func processFilePath(filePath string, checkExistence bool) (string, error) {
 	filePath = strings.Replace(filePath, "file://", "", -1)
 
 	if filePath[0] != '/' {
@@ -92,20 +97,28 @@ func processFilePath(filePath string) (string, error) {
 		filePath = path.Join(configFolder, filePath)
 	}
 
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return "", fmt.Errorf("File does not exist %s", filePath)
+	if checkExistence {
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			return "", fmt.Errorf("File does not exist %s", filePath)
+		}
 	}
 
 	return filePath, nil
 }
 
 func (response *Response) setFile(filePath string) error {
-	filePath, err := processFilePath(filePath)
+	filePath, err := processFilePath(filePath, false)
 	if err != nil {
 		return err
 	}
 
-	response.file = filePath
+	templateInstance := template.New("template")
+	_, err = templateInstance.Parse(filePath)
+	if err != nil {
+		return err
+	}
+
+	response.file = templateInstance
 	return nil
 }
 
@@ -117,7 +130,7 @@ func (response *Response) setTemplate(templateString string) error {
 
 	templateInstance := template.New("template")
 	if matched {
-		filePath, err := processFilePath(templateString)
+		filePath, err := processFilePath(templateString, true)
 		if err != nil {
 			return err
 		}
