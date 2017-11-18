@@ -62,7 +62,7 @@ var schema = `
                     "type": "string",
                     "minLength": 1
                 },
-                "content_type": {"type": "string"},
+                "headers": {"$ref": "#/definitions/headers"},
                 "status_code": {
                     "type": "integer",
                     "enum": [
@@ -85,11 +85,18 @@ var schema = `
                     "type": "string",
                     "pattern": "^file:\/\/[a-zA-Z0-9_ -\/.{}]*$"
                 },
-                "content_type": {"type": "string"},
+                "headers": {"$ref": "#/definitions/headers"},
                 "status_code": {
                     "type": "integer",
                     "enum": [200]
                 }
+            }
+        },
+        "headers": {
+            "type": "object",
+            "additionalProperties": false,
+            "patternProperties": {
+                "^[a-zA-Z0-9-]*$": {"type": ["number", "string"]}
             }
         }
     }
