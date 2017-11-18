@@ -83,7 +83,7 @@ var schema = `
             "properties": {
                 "file": {
                     "type": "string",
-                    "pattern": "^file:\/\/[a-zA-Z0-9_ -\/]*$"
+                    "pattern": "^file:\/\/[a-zA-Z0-9_ -\/.{}]*$"
                 },
                 "content_type": {"type": "string"},
                 "status_code": {

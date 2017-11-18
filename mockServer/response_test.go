@@ -20,7 +20,7 @@ func TestWriteTemplateResponse(t *testing.T) {
 	tmpl := template.New("template")
 	tmpl.Parse(`{"passed_value": "{{.var}}"}`)
 
-	response := Response{tmpl, "", "application/json", http.StatusCreated}
+	response := Response{tmpl, nil, "application/json", http.StatusCreated}
 	router := mux.NewRouter()
 	router.HandleFunc("/simple_url/{var}", response.WriteResponse)
 
@@ -41,7 +41,7 @@ func TestWriteTemplateResponseWithoutVarsInURL(t *testing.T) {
 	tmpl := template.New("template")
 	tmpl.Parse(`{"passed_value": "{{.var}}"}`)
 
-	response := Response{tmpl, "", "application/json", http.StatusCreated}
+	response := Response{tmpl, nil, "application/json", http.StatusCreated}
 	router := mux.NewRouter()
 	router.HandleFunc("/simple_url", response.WriteResponse)
 
@@ -62,7 +62,7 @@ func TestWriteTemplateResponseWithoutVarsInTemplate(t *testing.T) {
 	tmpl := template.New("template")
 	tmpl.Parse(`{"passed_value": "2"}`)
 
-	response := Response{tmpl, "", "application/json", http.StatusCreated}
+	response := Response{tmpl, nil, "application/json", http.StatusCreated}
 	router := mux.NewRouter()
 	router.HandleFunc("/simple_url/{var}", response.WriteResponse)
 
@@ -86,7 +86,11 @@ func TestWriteFileResponse(t *testing.T) {
 	req := httptest.NewRequest("GET", "/simple_url", nil)
 
 	filepath := path.Join(path.Dir(filename), "..", "examples", "mimicro.png")
-	var response = Response{nil, filepath, "", http.StatusOK}
+
+	tmpl := template.New("template")
+	tmpl.Parse(filepath)
+
+	var response = Response{nil, tmpl, "", http.StatusOK}
 
 	response.WriteResponse(w, req)
 
@@ -99,6 +103,58 @@ func TestWriteFileResponse(t *testing.T) {
 	fileContent, err := ioutil.ReadFile(filepath)
 	assert.Nil(t, err)
 	assert.Equal(t, fileContent, body)
+}
+
+func TestWriteFileResponseWithVarInPath(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	filepath := path.Join(path.Dir(filename), "..", "examples", "{{.var}}micro.png")
+	realFilepath := path.Join(path.Dir(filename), "..", "examples", "mimicro.png")
+
+	tmpl := template.New("template")
+	tmpl.Parse(filepath)
+
+	response := Response{nil, tmpl, "", http.StatusOK}
+	router := mux.NewRouter()
+	router.HandleFunc("/{var}/in/filepath", response.WriteResponse)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/mi/in/filepath", nil)
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	assert.Equal(t, "image/png", resp.Header.Get("Content-Type"))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	fileContent, err := ioutil.ReadFile(realFilepath)
+	assert.Nil(t, err)
+	assert.Equal(t, fileContent, body)
+}
+
+func TestWriteFileResponseWhenFileDoesNotExist(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	filepath := path.Join(path.Dir(filename), "..", "examples", "{{.var}}micro.png")
+
+	tmpl := template.New("template")
+	tmpl.Parse(filepath)
+
+	response := Response{nil, tmpl, "", http.StatusOK}
+	router := mux.NewRouter()
+	router.HandleFunc("/{var}/in/filepath", response.WriteResponse)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/ne/in/filepath", nil)
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	assert.Equal(t, "text/plain; charset=utf-8", resp.Header.Get("Content-Type"))
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	assert.Equal(t, "404 page not found\n", string(body))
 }
 
 func createResponseFromConfig(config string) Response {
@@ -132,7 +188,7 @@ status_code: 201
 
 	response := createResponseFromConfig(config)
 
-	assert.Equal(t, "", response.file)
+	assert.Nil(t, response.file)
 	assert.NotNil(t, response.template)
 	assert.Equal(t, "var = 42", executeTemplate(response.template, map[string]string{"var": "42"}))
 
@@ -142,7 +198,7 @@ status_code: 201
 
 func TestUnmarshalTemplateFile(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
+	ConfigPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
 
 	cases := []string{
 		path.Join(path.Dir(filename), "..", "examples", "response_with_var.json"), // absolute path
@@ -157,7 +213,7 @@ func TestUnmarshalTemplateFile(t *testing.T) {
 
 		response := createResponseFromConfig(config)
 
-		assert.Equal(t, "", response.file)
+		assert.Nil(t, response.file)
 		assert.NotNil(t, response.template)
 		assert.Equal(
 			t,
@@ -172,7 +228,7 @@ func TestUnmarshalTemplateFile(t *testing.T) {
 
 func TestUnmarshalBinaryFile(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	configPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
+	ConfigPath = path.Join(path.Dir(filename), "..", "examples", "config.yaml")
 	absoluteFilePath := path.Join(path.Dir(filename), "..", "examples", "mimicro.png")
 
 	cases := []string{
@@ -181,6 +237,7 @@ func TestUnmarshalBinaryFile(t *testing.T) {
 		"../examples/mimicro.png",
 		"../../mimicro/examples/mimicro.png",
 		"mimicro.png",
+		"{{.var}}micro.png",
 	}
 
 	for _, filePath := range cases {
@@ -189,26 +246,24 @@ func TestUnmarshalBinaryFile(t *testing.T) {
 		response := createResponseFromConfig(config)
 
 		assert.Nil(t, response.template)
-		assert.Equal(t, absoluteFilePath, response.file)
+		assert.Equal(
+			t,
+			absoluteFilePath,
+			executeTemplate(response.file, map[string]string{"var": "mi"}),
+		)
 
 		assert.Equal(t, "", response.ContentType)
 		assert.Equal(t, http.StatusOK, response.StatusCode)
 	}
 }
 
-func TestUnmarshalNonexistingFileOrTemplate(t *testing.T) {
-	cases := []string{
-		"template",
-		"file",
-	}
-
+func TestUnmarshalNonexistingTemplate(t *testing.T) {
 	var response Response
 
-	for _, field := range cases {
-		config := fmt.Sprintf(`%s: file:///wrong_file`, field)
+	config := "template: file:///wrong_file"
 
-		err := yaml.Unmarshal([]byte(config), &response)
-		assert.NotNil(t, err)
-		assert.Equal(t, "error unmarshaling JSON: File does not exist /wrong_file", err.Error())
-	}
+	err := yaml.Unmarshal([]byte(config), &response)
+	assert.NotNil(t, err)
+	assert.Equal(t, "error unmarshaling JSON: File does not exist /wrong_file", err.Error())
+
 }
