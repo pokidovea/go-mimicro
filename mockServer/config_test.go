@@ -33,7 +33,8 @@ servers:
       - url: /simple_url
         GET:
           template: "{}"
-          content_type: application/json
+          headers:
+              content-type: application/json
           status_code: "201"
     `
 	expectedError := `servers.0.endpoints.0.GET: Must validate one and only one schema (oneOf)
@@ -67,13 +68,13 @@ func TestLoadConfigFromFile(t *testing.T) {
 	getResponse := endpoint.GET
 	assert.NotNil(t, getResponse.template)
 	assert.Nil(t, getResponse.file)
-	assert.Equal(t, "application/json", getResponse.ContentType)
+	assert.Equal(t, "application/json", getResponse.Headers.Get("Content-Type"))
 	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
 	postResponse := endpoint.POST
 	assert.NotNil(t, postResponse.template)
 	assert.Nil(t, postResponse.file)
-	assert.Equal(t, "text/plain", postResponse.ContentType)
+	assert.Equal(t, "text/plain", postResponse.Headers.Get("Content-Type"))
 	assert.Equal(t, http.StatusCreated, postResponse.StatusCode)
 
 	patchResponse := endpoint.PATCH
@@ -92,7 +93,7 @@ func TestLoadConfigFromFile(t *testing.T) {
 	getResponse = endpoint.GET
 	assert.Nil(t, getResponse.template)
 	assert.NotNil(t, getResponse.file)
-	assert.Equal(t, "", getResponse.ContentType)
+	assert.Equal(t, "", getResponse.Headers.Get("Content-Type"))
 	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
 	postResponse = endpoint.POST
@@ -114,7 +115,7 @@ func TestLoadConfigFromFile(t *testing.T) {
 	getResponse = endpoint.GET
 	assert.Nil(t, getResponse.template)
 	assert.NotNil(t, getResponse.file)
-	assert.Equal(t, "", getResponse.ContentType)
+	assert.Equal(t, "", getResponse.Headers.Get("Content-Type"))
 	assert.Equal(t, http.StatusOK, getResponse.StatusCode)
 
 	postResponse = endpoint.POST
@@ -145,7 +146,7 @@ func TestLoadConfigFromFile(t *testing.T) {
 	putResponse = endpoint.PUT
 	assert.NotNil(t, putResponse.template)
 	assert.Nil(t, putResponse.file)
-	assert.Equal(t, "application/json", putResponse.ContentType)
+	assert.Equal(t, "application/json", putResponse.Headers.Get("Content-Type"))
 	assert.Equal(t, http.StatusOK, putResponse.StatusCode)
 
 	deleteResponse = endpoint.DELETE
@@ -170,6 +171,5 @@ func TestLoadConfigFromFile(t *testing.T) {
 	deleteResponse = endpoint.DELETE
 	assert.NotNil(t, deleteResponse.template)
 	assert.Nil(t, deleteResponse.file)
-	assert.Equal(t, "text/plain", deleteResponse.ContentType)
 	assert.Equal(t, http.StatusForbidden, deleteResponse.StatusCode)
 }
