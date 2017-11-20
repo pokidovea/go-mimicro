@@ -20,7 +20,7 @@ func TestWriteTemplateResponse(t *testing.T) {
 	tmpl := template.New("template")
 	tmpl.Parse(`{"passed_value": "{{.var}}"}`)
 
-	response := Response{tmpl, nil, "application/json", http.StatusCreated}
+	response := Response{tmpl, nil, http.StatusCreated, http.Header{"Content-Type": []string{"application/json"}}}
 	router := mux.NewRouter()
 	router.HandleFunc("/simple_url/{var}", response.WriteResponse)
 
@@ -41,7 +41,7 @@ func TestWriteTemplateResponseWithoutVarsInURL(t *testing.T) {
 	tmpl := template.New("template")
 	tmpl.Parse(`{"passed_value": "{{.var}}"}`)
 
-	response := Response{tmpl, nil, "application/json", http.StatusCreated}
+	response := Response{tmpl, nil, http.StatusCreated, http.Header{"Content-Type": []string{"application/json"}}}
 	router := mux.NewRouter()
 	router.HandleFunc("/simple_url", response.WriteResponse)
 
@@ -62,7 +62,7 @@ func TestWriteTemplateResponseWithoutVarsInTemplate(t *testing.T) {
 	tmpl := template.New("template")
 	tmpl.Parse(`{"passed_value": "2"}`)
 
-	response := Response{tmpl, nil, "application/json", http.StatusCreated}
+	response := Response{tmpl, nil, http.StatusCreated, http.Header{"Content-Type": []string{"application/json"}}}
 	router := mux.NewRouter()
 	router.HandleFunc("/simple_url/{var}", response.WriteResponse)
 
@@ -90,7 +90,7 @@ func TestWriteFileResponse(t *testing.T) {
 	tmpl := template.New("template")
 	tmpl.Parse(filepath)
 
-	var response = Response{nil, tmpl, "", http.StatusOK}
+	var response = Response{nil, tmpl, http.StatusOK, http.Header{}}
 
 	response.WriteResponse(w, req)
 
@@ -113,7 +113,7 @@ func TestWriteFileResponseWithVarInPath(t *testing.T) {
 	tmpl := template.New("template")
 	tmpl.Parse(filepath)
 
-	response := Response{nil, tmpl, "", http.StatusOK}
+	response := Response{nil, tmpl, http.StatusOK, http.Header{}}
 	router := mux.NewRouter()
 	router.HandleFunc("/{var}/in/filepath", response.WriteResponse)
 
@@ -140,7 +140,7 @@ func TestWriteFileResponseWhenFileDoesNotExist(t *testing.T) {
 	tmpl := template.New("template")
 	tmpl.Parse(filepath)
 
-	response := Response{nil, tmpl, "", http.StatusOK}
+	response := Response{nil, tmpl, http.StatusOK, http.Header{}}
 	router := mux.NewRouter()
 	router.HandleFunc("/{var}/in/filepath", response.WriteResponse)
 
@@ -182,7 +182,9 @@ func executeTemplate(tmpl *template.Template, vars map[string]string) string {
 func TestUnmarshalTemplateString(t *testing.T) {
 	config := `
 template: "var = {{.var}}"
-content_type: application/json
+headers:
+    content-type: application/json
+    Max-Forwards: 10
 status_code: 201
     `
 
@@ -192,7 +194,8 @@ status_code: 201
 	assert.NotNil(t, response.template)
 	assert.Equal(t, "var = 42", executeTemplate(response.template, map[string]string{"var": "42"}))
 
-	assert.Equal(t, "application/json", response.ContentType)
+	assert.Equal(t, "application/json", response.Headers.Get("Content-Type"))
+	assert.Equal(t, "10", response.Headers.Get("max-forwards"))
 	assert.Equal(t, http.StatusCreated, response.StatusCode)
 }
 
@@ -221,7 +224,6 @@ func TestUnmarshalTemplateFile(t *testing.T) {
 			executeTemplate(response.template, map[string]string{"var": "43"}),
 		)
 
-		assert.Equal(t, "text/plain", response.ContentType)
 		assert.Equal(t, http.StatusOK, response.StatusCode)
 	}
 }
@@ -252,7 +254,6 @@ func TestUnmarshalBinaryFile(t *testing.T) {
 			executeTemplate(response.file, map[string]string{"var": "mi"}),
 		)
 
-		assert.Equal(t, "", response.ContentType)
 		assert.Equal(t, http.StatusOK, response.StatusCode)
 	}
 }

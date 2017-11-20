@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -19,10 +20,10 @@ const filePathRegexp = `^file:\/\/[\/\w\.]*$`
 
 // Response struct contains the information about response, such as content, ctype, status code etc.
 type Response struct {
-	template    *template.Template
-	file        *template.Template
-	ContentType string `json:"content_type"`
-	StatusCode  int    `json:"status_code"`
+	template   *template.Template
+	file       *template.Template
+	StatusCode int         `json:"status_code"`
+	Headers    http.Header `json:"headers"`
 }
 
 // UnmarshalJSON used by json lib. Describes how to translate json config into struct
@@ -48,13 +49,16 @@ func (response *Response) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	if val, ok := m["content_type"]; !ok {
-		if response.template != nil {
-			response.ContentType = "text/plain"
+	response.Headers = http.Header{}
+	if m["headers"] != nil {
+		for header, value := range m["headers"].(map[string]interface{}) {
+			switch v := value.(type) {
+			case float64:
+				response.Headers.Set(header, strconv.FormatFloat(v, 'f', -1, 64))
+			case string:
+				response.Headers.Set(header, v)
+			}
 		}
-		// otherwise ctype will be detected automatically
-	} else {
-		response.ContentType = val.(string)
 	}
 
 	if val, ok := m["status_code"]; !ok || response.file != nil {
@@ -68,8 +72,8 @@ func (response *Response) UnmarshalJSON(data []byte) error {
 
 // WriteResponse sends the response to the client according to the response params
 func (response *Response) WriteResponse(w http.ResponseWriter, req *http.Request) {
-	if response.ContentType != "" {
-		w.Header().Set("Content-Type", response.ContentType)
+	for header, value := range response.Headers {
+		w.Header().Set(header, value[0])
 	}
 
 	vars := mux.Vars(req)

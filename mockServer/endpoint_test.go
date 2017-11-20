@@ -1,31 +1,30 @@
 package mockServer
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ghodss/yaml"
 	"github.com/pokidovea/mimicro/statistics"
 	"github.com/stretchr/testify/assert"
 )
 
 func createEndpoint() Endpoint {
-	str := `{
-        "url": "/simple_url",
-        "GET": {
-            "template": "{}",
-            "content_type": "application/json"
-        },
-        "POST": {
-            "template": "OK",
-            "status_code": 201
-        }
-    }`
+	str := `
+url: /simple_url
+GET:
+    template: "{}"
+    headers:
+        content-type: application/json
+POST:
+    template: OK
+    status_code: 201
+`
 
 	var endpoint Endpoint
-	err := json.Unmarshal([]byte(str), &endpoint)
+	err := yaml.Unmarshal([]byte(str), &endpoint)
 
 	if err != nil {
 		panic(err)
@@ -63,7 +62,6 @@ func TestHandlePOSTResponse(t *testing.T) {
 	resp := w.Result()
 
 	body, _ := ioutil.ReadAll(resp.Body)
-	assert.Equal(t, "text/plain", resp.Header.Get("Content-Type"))
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 	assert.Equal(t, "OK", string(body))
 }
