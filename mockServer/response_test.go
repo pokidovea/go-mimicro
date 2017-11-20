@@ -184,6 +184,7 @@ func TestUnmarshalTemplateString(t *testing.T) {
 template: "var = {{.var}}"
 headers:
     content-type: application/json
+    Max-Forwards: 10
 status_code: 201
     `
 
@@ -194,6 +195,7 @@ status_code: 201
 	assert.Equal(t, "var = 42", executeTemplate(response.template, map[string]string{"var": "42"}))
 
 	assert.Equal(t, "application/json", response.Headers.Get("Content-Type"))
+	assert.Equal(t, "10", response.Headers.Get("max-forwards"))
 	assert.Equal(t, http.StatusCreated, response.StatusCode)
 }
 
