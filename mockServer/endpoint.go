@@ -1,33 +1,23 @@
 package mockServer
 
 import (
-	"log"
 	"net/http"
-
-	"github.com/pokidovea/mimicro/statistics"
 )
 
-// Endpoint represents an URL, wich accepts one ore several types of requests
+type httpHandler = func(w http.ResponseWriter, req *http.Request)
+
+// Endpoint represents an URL, wich accepts one or several types of requests
 type Endpoint struct {
-	statisticsChannel chan statistics.Request
-	serverName        string
-	URL               string    `json:"url"`
-	GET               *Response `json:"GET"`
-	POST              *Response `json:"POST"`
-	PATCH             *Response `json:"PATCH"`
-	PUT               *Response `json:"PUT"`
-	DELETE            *Response `json:"DELETE"`
+	URL    string    `json:"url"`
+	GET    *Response `json:"GET"`
+	POST   *Response `json:"POST"`
+	PATCH  *Response `json:"PATCH"`
+	PUT    *Response `json:"PUT"`
+	DELETE *Response `json:"DELETE"`
 }
 
-// CollectStatistics sets statisticsChannel and serverName for the endpoint
-// TODO: Give better name for this function
-func (endpoint *Endpoint) CollectStatistics(statisticsChannel chan statistics.Request, serverName string) {
-	endpoint.statisticsChannel = statisticsChannel
-	endpoint.serverName = serverName
-}
-
-// GetHandler returns a function to register it as handler in mux
-func (endpoint Endpoint) GetHandler() func(w http.ResponseWriter, req *http.Request) {
+// GetHandler returns a function to register it as a http handler
+func (endpoint Endpoint) GetHandler(statisticsWriter StatisticsWriter, serverName string) httpHandler {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var response *Response
 
@@ -43,23 +33,12 @@ func (endpoint Endpoint) GetHandler() func(w http.ResponseWriter, req *http.Requ
 			response = endpoint.DELETE
 		}
 
-		statisticsRequest := statistics.Request{
-			ServerName: endpoint.serverName,
-			Url:        req.URL.String(),
-			Method:     req.Method,
-		}
-
 		if response != nil {
+			statisticsWriter(serverName, req.URL.String(), req.Method, response.StatusCode)
 			response.WriteResponse(w, req)
-			statisticsRequest.StatusCode = response.StatusCode
 		} else {
-			statisticsRequest.StatusCode = http.StatusNotFound
+			statisticsWriter(serverName, req.URL.String(), req.Method, http.StatusNotFound)
 			http.NotFound(w, req)
-		}
-		log.Printf("Requested %s \n", statisticsRequest)
-
-		if endpoint.statisticsChannel != nil {
-			endpoint.statisticsChannel <- statisticsRequest
 		}
 	}
 }

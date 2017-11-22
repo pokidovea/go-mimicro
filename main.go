@@ -7,8 +7,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/pokidovea/mimicro/management"
 	"github.com/pokidovea/mimicro/mockServer"
-	"github.com/pokidovea/mimicro/statistics"
 )
 
 func checkConfig(configPath string) error {
@@ -52,21 +52,26 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
-	var statisticsChannel chan statistics.Request
 
-	if *collectStatistics {
-		wg.Add(2)
+	managementServer := management.NewServer(*managementPort, *collectStatistics)
+	wg.Add(1)
+	go managementServer.Serve(&wg)
 
-		statisticsCollector := statistics.NewCollector()
-		statisticsChannel = statisticsCollector.Chan
+	// var statisticsChannel chan statistics.Request
 
-		go statisticsCollector.Run(&wg)
-		go statisticsCollector.Serve(*managementPort, &wg)
-	}
+	// if *collectStatistics {
+	// 	wg.Add(2)
+
+	// 	statisticsCollector := statistics.NewCollector()
+	// 	statisticsChannel = statisticsCollector.Chan
+
+	// 	go statisticsCollector.Run(&wg)
+	// 	go statisticsCollector.Serve(*managementPort, &wg)
+	// }
 
 	for _, server := range serverCollection.Servers {
 		wg.Add(1)
-		go server.Serve(statisticsChannel, &wg)
+		go server.Serve(managementServer.CollectStatistics, &wg)
 	}
 
 	wg.Wait()

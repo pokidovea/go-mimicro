@@ -11,22 +11,23 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pokidovea/mimicro/statistics"
 )
 
-// MockServer represents a standalone server with its name, port and collection of endpoints
+// StatisticsWriter is signature of method, wich should be passed to the mock server to write requests statistics
+type StatisticsWriter func(serverName, URL, method string, statusCode int)
+
+// MockServer represents a standalone mock server with its name, port and collection of endpoints
 type MockServer struct {
 	Name      string     `json:"name"`
 	Port      int        `json:"port"`
 	Endpoints []Endpoint `json:"endpoints"`
 }
 
-func (mockServer MockServer) startHTTPServer(statisticsChannel chan statistics.Request) *http.Server {
+func (mockServer MockServer) startHTTPServer(statisticsWriter StatisticsWriter) *http.Server {
 	router := mux.NewRouter()
 
 	for _, endpoint := range mockServer.Endpoints {
-		endpoint.CollectStatistics(statisticsChannel, mockServer.Name)
-		router.HandleFunc(endpoint.URL, endpoint.GetHandler())
+		router.HandleFunc(endpoint.URL, endpoint.GetHandler(statisticsWriter, mockServer.Name))
 	}
 
 	srv := &http.Server{
@@ -47,13 +48,13 @@ func (mockServer MockServer) startHTTPServer(statisticsChannel chan statistics.R
 }
 
 // Serve method starts the server and does some operations after it stops
-func (mockServer MockServer) Serve(statisticsChannel chan statistics.Request, wg *sync.WaitGroup) {
+func (mockServer MockServer) Serve(statisticsWriter StatisticsWriter, wg *sync.WaitGroup) {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 	defer close(interrupt)
 	defer signal.Stop(interrupt)
 
-	srv := mockServer.startHTTPServer(statisticsChannel)
+	srv := mockServer.startHTTPServer(statisticsWriter)
 	<-interrupt
 
 	log.Printf("[%s] Stopping a server...", mockServer.Name)
