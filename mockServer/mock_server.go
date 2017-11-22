@@ -13,8 +13,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// StatisticsWriter is signature of method, wich should be passed to the mock server to write requests statistics
-type StatisticsWriter func(serverName, URL, method string, statusCode int)
+// RequestLogWriter is signature of method, wich should be passed to the mock server to write requests log
+type RequestLogWriter func(serverName, URL, method string, statusCode int)
 
 // MockServer represents a standalone mock server with its name, port and collection of endpoints
 type MockServer struct {
@@ -23,11 +23,11 @@ type MockServer struct {
 	Endpoints []Endpoint `json:"endpoints"`
 }
 
-func (mockServer MockServer) startHTTPServer(statisticsWriter StatisticsWriter) *http.Server {
+func (mockServer MockServer) startHTTPServer(logWriter RequestLogWriter) *http.Server {
 	router := mux.NewRouter()
 
 	for _, endpoint := range mockServer.Endpoints {
-		router.HandleFunc(endpoint.URL, endpoint.GetHandler(statisticsWriter, mockServer.Name))
+		router.HandleFunc(endpoint.URL, endpoint.GetHandler(logWriter, mockServer.Name))
 	}
 
 	srv := &http.Server{
@@ -48,16 +48,17 @@ func (mockServer MockServer) startHTTPServer(statisticsWriter StatisticsWriter) 
 }
 
 // Serve method starts the server and does some operations after it stops
-func (mockServer MockServer) Serve(statisticsWriter StatisticsWriter, wg *sync.WaitGroup) {
+func (mockServer MockServer) Serve(logWriter RequestLogWriter, wg *sync.WaitGroup) {
+	log.Printf("[%s] Starting...", mockServer.Name)
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 	defer close(interrupt)
 	defer signal.Stop(interrupt)
 
-	srv := mockServer.startHTTPServer(statisticsWriter)
+	srv := mockServer.startHTTPServer(logWriter)
 	<-interrupt
 
-	log.Printf("[%s] Stopping a server...", mockServer.Name)
+	log.Printf("[%s] Stopping...", mockServer.Name)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -65,7 +66,7 @@ func (mockServer MockServer) Serve(statisticsWriter StatisticsWriter, wg *sync.W
 		log.Printf("[%s] Shutdown error: %s", mockServer.Name, err)
 	}
 
-	log.Printf("[%s] Server stopped", mockServer.Name)
+	log.Printf("[%s] Stopped", mockServer.Name)
 
 	wg.Done()
 }

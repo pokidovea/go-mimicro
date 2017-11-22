@@ -17,7 +17,7 @@ type Endpoint struct {
 }
 
 // GetHandler returns a function to register it as a http handler
-func (endpoint Endpoint) GetHandler(statisticsWriter StatisticsWriter, serverName string) httpHandler {
+func (endpoint Endpoint) GetHandler(logWriter RequestLogWriter, serverName string) httpHandler {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var response *Response
 
@@ -34,10 +34,10 @@ func (endpoint Endpoint) GetHandler(statisticsWriter StatisticsWriter, serverNam
 		}
 
 		if response != nil {
-			statisticsWriter(serverName, req.URL.String(), req.Method, response.StatusCode)
+			logWriter(serverName, req.URL.String(), req.Method, response.StatusCode)
 			response.WriteResponse(w, req)
 		} else {
-			statisticsWriter(serverName, req.URL.String(), req.Method, http.StatusNotFound)
+			logWriter(serverName, req.URL.String(), req.Method, http.StatusNotFound)
 			http.NotFound(w, req)
 		}
 	}

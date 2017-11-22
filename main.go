@@ -71,7 +71,7 @@ func main() {
 
 	for _, server := range serverCollection.Servers {
 		wg.Add(1)
-		go server.Serve(managementServer.CollectStatistics, &wg)
+		go server.Serve(managementServer.WriteRequestLog, &wg)
 	}
 
 	wg.Wait()
