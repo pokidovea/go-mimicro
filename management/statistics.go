@@ -35,28 +35,40 @@ type statisticsRecord struct {
 }
 
 type statisticsStorage struct {
+	mutex           sync.RWMutex
 	RequestsChannel chan ReceivedRequest
-	requests        sync.Map
+	requests        map[ReceivedRequest]int
 }
 
 func newStatisticsStorage() *statisticsStorage {
 	storage := new(statisticsStorage)
+	storage.requests = make(map[ReceivedRequest]int)
 	storage.RequestsChannel = make(chan ReceivedRequest)
 	return storage
 }
 
 func (storage *statisticsStorage) add(request ReceivedRequest) {
-	if actual, loaded := storage.requests.LoadOrStore(request, 1); loaded {
-		storage.requests.Store(request, actual.(int)+1)
-	}
+	storage.mutex.Lock()
+	defer storage.mutex.Unlock()
+	storage.requests[request]++
 }
 
-func (storage statisticsStorage) get(request ReceivedRequest) int {
-	if value, ok := storage.requests.Load(request); ok {
-		return value.(int)
-	}
+func (storage *statisticsStorage) get(request ReceivedRequest) int {
+	storage.mutex.RLock()
+	defer storage.mutex.RUnlock()
 
-	return 0
+	return storage.requests[request]
+}
+
+func (storage *statisticsStorage) iter(f func(request ReceivedRequest, count int) bool) {
+	storage.mutex.RLock()
+	defer storage.mutex.RUnlock()
+
+	for request, count := range storage.requests {
+		if !f(request, count) {
+			return
+		}
+	}
 }
 
 func (storage *statisticsStorage) Run(done <-chan bool) {
@@ -80,8 +92,7 @@ func (storage *statisticsStorage) Run(done <-chan bool) {
 func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest) []statisticsRecord {
 	var records []statisticsRecord
 
-	storage.requests.Range(func(key, value interface{}) bool {
-		collectedRequest := key.(ReceivedRequest)
+	storage.iter(func(collectedRequest ReceivedRequest, count int) bool {
 		if request.ServerName != collectedRequest.ServerName {
 			return true
 		}
@@ -97,7 +108,7 @@ func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest)
 			statisticsRecord{
 				URL:    collectedRequest.URL,
 				Method: collectedRequest.Method,
-				Count:  value.(int),
+				Count:  count,
 			},
 		)
 
