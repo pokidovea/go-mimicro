@@ -57,18 +57,6 @@ func main() {
 	wg.Add(1)
 	go managementServer.Serve(&wg)
 
-	// var statisticsChannel chan statistics.Request
-
-	// if *collectStatistics {
-	// 	wg.Add(2)
-
-	// 	statisticsCollector := statistics.NewCollector()
-	// 	statisticsChannel = statisticsCollector.Chan
-
-	// 	go statisticsCollector.Run(&wg)
-	// 	go statisticsCollector.Serve(*managementPort, &wg)
-	// }
-
 	for _, server := range serverCollection.Servers {
 		wg.Add(1)
 		go server.Serve(managementServer.WriteRequestLog, &wg)

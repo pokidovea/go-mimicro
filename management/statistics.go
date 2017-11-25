@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/mux"
 )
@@ -35,22 +36,27 @@ type statisticsRecord struct {
 
 type statisticsStorage struct {
 	RequestsChannel chan ReceivedRequest
-	requests        map[ReceivedRequest]int
+	requests        sync.Map
 }
 
 func newStatisticsStorage() *statisticsStorage {
 	storage := new(statisticsStorage)
-	storage.requests = make(map[ReceivedRequest]int)
 	storage.RequestsChannel = make(chan ReceivedRequest)
 	return storage
 }
 
 func (storage *statisticsStorage) add(request ReceivedRequest) {
-	storage.requests[request]++
+	if actual, loaded := storage.requests.LoadOrStore(request, 1); loaded {
+		storage.requests.Store(request, actual.(int)+1)
+	}
 }
 
 func (storage statisticsStorage) get(request ReceivedRequest) int {
-	return storage.requests[request]
+	if value, ok := storage.requests.Load(request); ok {
+		return value.(int)
+	}
+
+	return 0
 }
 
 func (storage *statisticsStorage) Run(done <-chan bool) {
@@ -74,15 +80,16 @@ func (storage *statisticsStorage) Run(done <-chan bool) {
 func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest) []statisticsRecord {
 	var records []statisticsRecord
 
-	for collectedRequest, count := range storage.requests {
+	storage.requests.Range(func(key, value interface{}) bool {
+		collectedRequest := key.(ReceivedRequest)
 		if request.ServerName != collectedRequest.ServerName {
-			continue
+			return true
 		}
 		if request.URL != "" && request.URL != collectedRequest.URL {
-			continue
+			return true
 		}
 		if request.Method != "" && request.Method != collectedRequest.Method {
-			continue
+			return true
 		}
 
 		records = append(
@@ -90,10 +97,12 @@ func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest)
 			statisticsRecord{
 				URL:    collectedRequest.URL,
 				Method: collectedRequest.Method,
-				Count:  count,
+				Count:  value.(int),
 			},
 		)
-	}
+
+		return true
+	})
 	return records
 }
 
