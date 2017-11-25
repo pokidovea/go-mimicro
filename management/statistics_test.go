@@ -3,52 +3,60 @@ package management
 import (
 	"fmt"
 	"net/http"
-	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCollection(t *testing.T) {
-	collector := NewCollector
-	request := Request{
+func TestAddAndGetRequests(t *testing.T) {
+	storage := newStatisticsStorage()
+	request1 := ReceivedRequest{
 		ServerName: "Simple server",
-		Url:        "/some_url",
+		URL:        "/some_url",
 		Method:     "POST",
 	}
-	collector.add(request)
-	collector.add(request)
-	assert.Equal(t, 2, collector.get(request))
+	storage.add(request1)
+	storage.add(request1)
+
+	request2 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/some_url",
+		Method:     "GET",
+	}
+	storage.add(request2)
+
+	assert.Equal(t, 2, storage.get(request1))
+	assert.Equal(t, 1, storage.get(request2))
 }
 
-func TestCollectionFromChannel(t *testing.T) {
+func TestCollectFromChannel(t *testing.T) {
+	storage := newStatisticsStorage()
 
-	collector := NewCollector()
-	collector.Chan = make(chan Request, 1)
 	done := make(chan bool, 1)
 	defer close(done)
 
-	request := Request{
+	request := ReceivedRequest{
 		ServerName: "Simple server",
-		Url:        "/some_url",
+		URL:        "/some_url",
 		Method:     "POST",
 	}
-	collector.Chan <- request
-	close(collector.Chan)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+	go storage.Run(done)
 
-	go collector.Run(&wg)
-	wg.Wait()
+	storage.RequestsChannel <- request
+	storage.RequestsChannel <- request
+	done <- true
 
-	assert.Equal(t, 1, collector.get(request))
+	time.Sleep(10 * time.Millisecond)
+
+	assert.Equal(t, 2, storage.get(request))
 }
 
 func TestStringifyRequest(t *testing.T) {
-	request := Request{
+	request := ReceivedRequest{
 		ServerName: "Simple server",
-		Url:        "/some_url",
+		URL:        "/some_url",
 		Method:     "POST",
 		StatusCode: http.StatusCreated,
 	}

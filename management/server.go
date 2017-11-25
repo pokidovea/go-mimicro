@@ -74,9 +74,10 @@ func (server Server) startHTTPServer() *http.Server {
 func (server Server) Serve(wg *sync.WaitGroup) {
 	log.Printf("[Management] Starting...")
 
+	stopStatisticsStorage := make(chan bool)
+	defer close(stopStatisticsStorage)
 	if server.statisticsStorage != nil {
-		wg.Add(1)
-		go server.statisticsStorage.Run(wg)
+		go server.statisticsStorage.Run(stopStatisticsStorage)
 	}
 
 	interrupt := make(chan os.Signal, 1)
@@ -86,6 +87,8 @@ func (server Server) Serve(wg *sync.WaitGroup) {
 
 	srv := server.startHTTPServer()
 	<-interrupt
+
+	stopStatisticsStorage <- true
 
 	log.Printf("[Management] Stopping...")
 

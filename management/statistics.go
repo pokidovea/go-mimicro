@@ -5,19 +5,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"sync"
 
 	"github.com/gorilla/mux"
 )
 
 // ReceivedRequest represents a request that was sent to a mock server
 type ReceivedRequest struct {
-	ServerName string `json:"server"`
-	URL        string `json:"endpoint"`
-	Method     string `json:"method"`
-	StatusCode int    `json:"status_code"`
+	ServerName string
+	URL        string
+	Method     string
+	StatusCode int
 }
 
 func (request ReceivedRequest) String() string {
@@ -56,15 +53,10 @@ func (storage statisticsStorage) get(request ReceivedRequest) int {
 	return storage.requests[request]
 }
 
-func (storage *statisticsStorage) Run(wg *sync.WaitGroup) {
+func (storage *statisticsStorage) Run(done <-chan bool) {
 	log.Printf("[Statistics storage] Starting...")
-	signalChannel := make(chan os.Signal, 1)
-	signal.Notify(signalChannel, os.Interrupt)
 
-	defer close(signalChannel)
-	defer signal.Stop(signalChannel)
 	defer log.Printf("[Statistics storage] Stopped")
-	defer wg.Done()
 
 	for {
 		select {
@@ -73,7 +65,7 @@ func (storage *statisticsStorage) Run(wg *sync.WaitGroup) {
 				return
 			}
 			storage.add(request)
-		case <-signalChannel:
+		case <-done:
 			return
 		}
 	}
