@@ -249,7 +249,7 @@ func TestHTTPHandlerOnlyServerName(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	expectedValues := []string{
 		`[{"url":"/some_url","method":"POST","count":2},{"url":"/another_url","method":"GET","count":1}]`,
-		`[{"url":"/another_url","method":"GET","count": 1},{"url":"/some_url","method":"POST","count":2}]`,
+		`[{"url":"/another_url","method":"GET","count":1},{"url":"/some_url","method":"POST","count":2}]`,
 	}
 
 	assert.Contains(t, expectedValues, string(body))
