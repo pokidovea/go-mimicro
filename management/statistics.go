@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/mux"
@@ -141,7 +142,7 @@ func (storage *statisticsStorage) HTTPHandler(w http.ResponseWriter, req *http.R
 	}
 	methods, ok := req.URL.Query()["method"]
 	if ok && len(methods) > 0 {
-		request.Method = methods[0]
+		request.Method = strings.ToUpper(methods[0])
 	}
 
 	statistics := storage.getRequestStatistics(&request)
