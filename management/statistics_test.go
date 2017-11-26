@@ -67,3 +67,133 @@ func TestStringifyRequest(t *testing.T) {
 		fmt.Sprintf("%s", request),
 	)
 }
+
+func TestGetRequestStatisticsWhenNothingFound(t *testing.T) {
+	request := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/some_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+
+	storage := newStatisticsStorage()
+
+	result := storage.getRequestStatistics(&request)
+
+	assert.Empty(t, result)
+}
+
+func TestGetRequestStatisticsByServerName(t *testing.T) {
+	request1 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/some_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+	request2 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+
+	storage := newStatisticsStorage()
+	storage.add(request1)
+	storage.add(request1)
+	storage.add(request2)
+
+	request := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "",
+		Method:     "",
+		StatusCode: 0,
+	}
+
+	result := storage.getRequestStatistics(&request)
+
+	expectedResult := requestsCounter{
+		request1: 2,
+		request2: 1,
+	}
+
+	assert.Equal(t, expectedResult, result)
+
+}
+
+func TestGetRequestStatisticsByURL(t *testing.T) {
+	request1 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/some_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+	request2 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+
+	storage := newStatisticsStorage()
+	storage.add(request1)
+	storage.add(request1)
+	storage.add(request2)
+
+	request := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/some_url",
+		Method:     "",
+		StatusCode: 0,
+	}
+
+	result := storage.getRequestStatistics(&request)
+
+	expectedResult := requestsCounter{
+		request1: 2,
+	}
+
+	assert.Equal(t, expectedResult, result)
+}
+
+func TestGetRequestStatisticsByMethod(t *testing.T) {
+	request1 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/some_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+	request2 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/another_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+	request3 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+
+	storage := newStatisticsStorage()
+	storage.add(request1)
+	storage.add(request1)
+	storage.add(request2)
+	storage.add(request3)
+
+	request := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+
+	result := storage.getRequestStatistics(&request)
+
+	expectedResult := requestsCounter{
+		request1: 2,
+		request2: 1,
+	}
+
+	assert.Equal(t, expectedResult, result)
+}

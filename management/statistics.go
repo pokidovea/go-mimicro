@@ -1,10 +1,12 @@
 package management
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/gorilla/mux"
@@ -28,21 +30,36 @@ func (request ReceivedRequest) String() string {
 	)
 }
 
-type statisticsRecord struct {
-	URL    string `json:"url"`
-	Method string `json:"method"`
-	Count  int    `json:"count"`
+type requestsCounter map[ReceivedRequest]int
+
+func (counter requestsCounter) MarshalJSON() ([]byte, error) {
+	buffer := bytes.NewBufferString("[")
+	length := len(counter)
+	count := 0
+	for request, requestsCount := range counter {
+		buffer.WriteString("{")
+		buffer.WriteString(fmt.Sprintf("\"url\":\"%s\",", request.URL))
+		buffer.WriteString(fmt.Sprintf("\"method\":\"%s\",", request.Method))
+		buffer.WriteString(fmt.Sprintf("\"count\":%s", strconv.Itoa(requestsCount)))
+		buffer.WriteString("}")
+		count++
+		if count < length {
+			buffer.WriteString(",")
+		}
+	}
+	buffer.WriteString("]")
+	return buffer.Bytes(), nil
 }
 
 type statisticsStorage struct {
 	mutex           sync.RWMutex
 	RequestsChannel chan ReceivedRequest
-	requests        map[ReceivedRequest]int
+	requests        requestsCounter
 }
 
 func newStatisticsStorage() *statisticsStorage {
 	storage := new(statisticsStorage)
-	storage.requests = make(map[ReceivedRequest]int)
+	storage.requests = make(requestsCounter)
 	storage.RequestsChannel = make(chan ReceivedRequest)
 	return storage
 }
@@ -89,8 +106,8 @@ func (storage *statisticsStorage) Run(done <-chan bool) {
 	}
 }
 
-func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest) []statisticsRecord {
-	var records []statisticsRecord
+func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest) requestsCounter {
+	records := make(requestsCounter)
 
 	storage.iter(func(collectedRequest ReceivedRequest, count int) bool {
 		if request.ServerName != collectedRequest.ServerName {
@@ -103,14 +120,7 @@ func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest)
 			return true
 		}
 
-		records = append(
-			records,
-			statisticsRecord{
-				URL:    collectedRequest.URL,
-				Method: collectedRequest.Method,
-				Count:  count,
-			},
-		)
+		records[collectedRequest] = count
 
 		return true
 	})
@@ -138,7 +148,7 @@ func (storage *statisticsStorage) HTTPHandler(w http.ResponseWriter, req *http.R
 	payload, err := json.Marshal(statistics)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("intervalServerError"))
+		w.Write([]byte("Internal server error"))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
