@@ -62,7 +62,7 @@ func TestLoadConfigFromFile(t *testing.T) {
 
 	// endpoint 0
 	endpoint := server.Endpoints[0]
-	assert.Equal(t, "/simple_url", endpoint.URL)
+	assert.Equal(t, "/simple/url", endpoint.URL)
 
 	getResponse := endpoint.GET
 	assert.NotNil(t, getResponse.template)

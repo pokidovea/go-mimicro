@@ -2,9 +2,9 @@ servers:
   - name: server_1
     port: 4573
     endpoints:
-      - url: /simple_url
+      - url: /simple/url
         GET:
-          template: "{}"
+          template: "{\"some\": \"value\"}"
           headers:
             content-type: application/json
         POST:
