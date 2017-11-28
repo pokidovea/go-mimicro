@@ -54,7 +54,6 @@ func TestLoadConfigFromFile(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, len(serverCollection.Servers), 1)
-	assert.True(t, serverCollection.CollectStatistics)
 
 	server := serverCollection.Servers[0]
 	assert.Equal(t, 4573, server.Port)

@@ -14,8 +14,7 @@ var ConfigPath = ""
 
 // ServerCollection сontains a full configuration of servers
 type ServerCollection struct {
-	CollectStatistics bool         `json:"collect_statistics"`
-	Servers           []MockServer `json:"servers"`
+	Servers []MockServer `json:"servers"`
 }
 
 func validateSchema(data []byte) error {
