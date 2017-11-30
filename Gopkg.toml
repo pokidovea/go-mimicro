@@ -36,3 +36,7 @@
 [[constraint]]
   name = "github.com/gorilla/mux"
   version = "1.6.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/equinox-io/equinox"
