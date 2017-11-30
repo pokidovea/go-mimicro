@@ -4,6 +4,24 @@
 
 A simply configurable mock-server which allows you to prepare environment for integration testing of your application. You only need to create a config file with set of required servers and responses of their endpoints.
 
+## Installation
+
+You can download a prepared package [here](https://dl.equinox.io/pokidovea/mimicro/stable) or clone the repository and compile by yourself.
+
+## Update
+
+Once you've installed (or compiled) the application, you can check for updates by calling
+
+```shell
+mimicro -update
+```
+
+To see current version type 
+
+```shell
+mimicro -version
+```
+
 ## Config example
 
 ```yaml
@@ -40,10 +58,16 @@ servers:
           status_code: 403
 ```
 
-## How to run
+## Check config
 
+```shell
+mimicro -config config.yaml -check
 ```
-> mimicro -config config.yaml -collect-statistics
+
+## Run
+
+```shell
+mimicro -config config.yaml
 ```
 
 After that you can make requests on `localhost:4573/simple/url` and get `{"some": "value"}` responses.
