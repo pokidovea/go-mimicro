@@ -36,20 +36,17 @@ func TestAddAndGetRequests(t *testing.T) {
 func TestCollectFromChannel(t *testing.T) {
 	storage := newStatisticsStorage()
 
-	done := make(chan bool, 1)
-	defer close(done)
-
 	request := ReceivedRequest{
 		ServerName: "Simple server",
 		URL:        "/some_url",
 		Method:     "POST",
 	}
 
-	go storage.Run(done)
+	storage.Start()
 
 	storage.RequestsChannel <- request
 	storage.RequestsChannel <- request
-	done <- true
+	storage.Stop()
 
 	time.Sleep(10 * time.Millisecond)
 

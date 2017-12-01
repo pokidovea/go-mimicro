@@ -56,12 +56,14 @@ type statisticsStorage struct {
 	mutex           sync.RWMutex
 	RequestsChannel chan ReceivedRequest
 	requests        requestsCounter
+	doneChannel     chan bool
 }
 
 func newStatisticsStorage() *statisticsStorage {
 	storage := new(statisticsStorage)
 	storage.requests = make(requestsCounter)
 	storage.RequestsChannel = make(chan ReceivedRequest)
+	storage.doneChannel = make(chan bool)
 	return storage
 }
 
@@ -89,7 +91,7 @@ func (storage *statisticsStorage) iter(f func(request ReceivedRequest, count int
 	}
 }
 
-func (storage *statisticsStorage) Run(done <-chan bool) {
+func (storage *statisticsStorage) run() {
 	log.Printf("[Statistics storage] Starting...")
 
 	defer log.Printf("[Statistics storage] Stopped")
@@ -101,10 +103,18 @@ func (storage *statisticsStorage) Run(done <-chan bool) {
 				return
 			}
 			storage.add(request)
-		case <-done:
+		case <-storage.doneChannel:
 			return
 		}
 	}
+}
+
+func (storage *statisticsStorage) Start() {
+	go storage.run()
+}
+
+func (storage *statisticsStorage) Stop() {
+	storage.doneChannel <- true
 }
 
 func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest) requestsCounter {
