@@ -56,14 +56,12 @@ type statisticsStorage struct {
 	mutex           sync.RWMutex
 	RequestsChannel chan ReceivedRequest
 	requests        requestsCounter
-	doneChannel     chan bool
 }
 
 func newStatisticsStorage() *statisticsStorage {
 	storage := new(statisticsStorage)
 	storage.requests = make(requestsCounter)
-	storage.RequestsChannel = make(chan ReceivedRequest)
-	storage.doneChannel = make(chan bool)
+	storage.RequestsChannel = make(chan ReceivedRequest, 100)
 	return storage
 }
 
@@ -96,16 +94,8 @@ func (storage *statisticsStorage) run() {
 
 	defer log.Printf("[Statistics storage] Stopped")
 
-	for {
-		select {
-		case request, ok := <-storage.RequestsChannel:
-			if !ok {
-				return
-			}
-			storage.add(request)
-		case <-storage.doneChannel:
-			return
-		}
+	for request := range storage.RequestsChannel {
+		storage.add(request)
 	}
 }
 
@@ -114,7 +104,7 @@ func (storage *statisticsStorage) Start() {
 }
 
 func (storage *statisticsStorage) Stop() {
-	storage.doneChannel <- true
+	close(storage.RequestsChannel)
 }
 
 func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest) requestsCounter {
