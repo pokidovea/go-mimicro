@@ -29,6 +29,20 @@ func (request ReceivedRequest) String() string {
 	)
 }
 
+func (request ReceivedRequest) matches(anotherRequest ReceivedRequest) bool {
+	if request.ServerName != "*" && request.ServerName != anotherRequest.ServerName {
+		return false
+	}
+	if request.URL != "*" && request.URL != anotherRequest.URL {
+		return false
+	}
+	if request.Method != "*" && request.Method != anotherRequest.Method {
+		return false
+	}
+
+	return true
+}
+
 type requestsCounter map[ReceivedRequest]int
 
 func (counter requestsCounter) MarshalJSON() ([]byte, error) {
@@ -68,6 +82,17 @@ func (storage *statisticsStorage) add(request ReceivedRequest) {
 	storage.mutex.Lock()
 	defer storage.mutex.Unlock()
 	storage.requests[request]++
+}
+
+func (storage *statisticsStorage) del(request ReceivedRequest) {
+	storage.mutex.Lock()
+	defer storage.mutex.Unlock()
+
+	for collectedRequest := range storage.requests {
+		if request.matches(collectedRequest) {
+			delete(storage.requests, collectedRequest)
+		}
+	}
 }
 
 func (storage *statisticsStorage) get(request ReceivedRequest) int {
@@ -110,13 +135,7 @@ func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest)
 	records := make(requestsCounter)
 
 	storage.iter(func(collectedRequest ReceivedRequest, count int) bool {
-		if request.ServerName != "" && request.ServerName != collectedRequest.ServerName {
-			return true
-		}
-		if request.URL != "" && request.URL != collectedRequest.URL {
-			return true
-		}
-		if request.Method != "" && request.Method != collectedRequest.Method {
+		if !request.matches(collectedRequest) {
 			return true
 		}
 
@@ -133,15 +152,22 @@ func (storage *statisticsStorage) GetStatisticsHandler(w http.ResponseWriter, re
 	servers, ok := req.URL.Query()["server"]
 	if ok && len(servers) > 0 {
 		request.ServerName = servers[0]
+	} else {
+		request.ServerName = "*"
 	}
 
 	urls, ok := req.URL.Query()["url"]
 	if ok && len(urls) > 0 {
 		request.URL = urls[0]
+	} else {
+		request.URL = "*"
 	}
+
 	methods, ok := req.URL.Query()["method"]
 	if ok && len(methods) > 0 {
 		request.Method = strings.ToUpper(methods[0])
+	} else {
+		request.Method = "*"
 	}
 
 	statistics := storage.getRequestStatistics(&request)

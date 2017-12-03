@@ -111,8 +111,8 @@ func TestGetRequestStatisticsByServerName(t *testing.T) {
 
 	request := ReceivedRequest{
 		ServerName: "Simple server",
-		URL:        "",
-		Method:     "",
+		URL:        "*",
+		Method:     "*",
 		StatusCode: 0,
 	}
 
@@ -149,7 +149,7 @@ func TestGetRequestStatisticsByURL(t *testing.T) {
 	request := ReceivedRequest{
 		ServerName: "Simple server",
 		URL:        "/some_url",
-		Method:     "",
+		Method:     "*",
 		StatusCode: 0,
 	}
 
@@ -190,7 +190,7 @@ func TestGetRequestStatisticsByMethod(t *testing.T) {
 
 	request := ReceivedRequest{
 		ServerName: "Simple server",
-		URL:        "",
+		URL:        "*",
 		Method:     "POST",
 		StatusCode: 0,
 	}
