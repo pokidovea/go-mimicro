@@ -71,3 +71,12 @@ mimicro -config config.yaml
 ```
 
 After that you can make requests on `localhost:4573/simple/url` and get `{"some": "value"}` responses.
+
+## Management server
+
+The management server can be accessed on port `4444` by default. You can change this port by passinng a flag `-management-port <your port>`. The management server provides you with some useful tools, such as statistics of requests.
+
+## Statistics of requests
+
+After passing a flag `-collect-statistics` you can get statistics of the requests by address `localhost:4444/statistics/get?server=<server name>&url=<url like in the config>&method=<method in any case>`. All parameters are optional. 
+
