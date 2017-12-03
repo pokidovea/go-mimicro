@@ -50,7 +50,7 @@ func (server Server) startHTTPServer() *http.Server {
 	router := mux.NewRouter()
 
 	if server.statisticsStorage != nil {
-		router.HandleFunc("/servers/{serverName}", server.statisticsStorage.HTTPHandler)
+		router.HandleFunc("/statistics/get", server.statisticsStorage.GetStatisticsHandler)
 	}
 
 	srv := &http.Server{

@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/gorilla/mux"
 )
 
 // ReceivedRequest represents a request that was sent to a mock server
@@ -39,6 +37,7 @@ func (counter requestsCounter) MarshalJSON() ([]byte, error) {
 	count := 0
 	for request, requestsCount := range counter {
 		buffer.WriteString("{")
+		buffer.WriteString(fmt.Sprintf("\"server\":\"%s\",", request.ServerName))
 		buffer.WriteString(fmt.Sprintf("\"url\":\"%s\",", request.URL))
 		buffer.WriteString(fmt.Sprintf("\"method\":\"%s\",", request.Method))
 		buffer.WriteString(fmt.Sprintf("\"count\":%s", strconv.Itoa(requestsCount)))
@@ -111,7 +110,7 @@ func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest)
 	records := make(requestsCounter)
 
 	storage.iter(func(collectedRequest ReceivedRequest, count int) bool {
-		if request.ServerName != collectedRequest.ServerName {
+		if request.ServerName != "" && request.ServerName != collectedRequest.ServerName {
 			return true
 		}
 		if request.URL != "" && request.URL != collectedRequest.URL {
@@ -128,12 +127,12 @@ func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest)
 	return records
 }
 
-func (storage *statisticsStorage) HTTPHandler(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	serverName := vars["serverName"]
+func (storage *statisticsStorage) GetStatisticsHandler(w http.ResponseWriter, req *http.Request) {
+	var request ReceivedRequest
 
-	request := ReceivedRequest{
-		ServerName: serverName,
+	servers, ok := req.URL.Query()["server"]
+	if ok && len(servers) > 0 {
+		request.ServerName = servers[0]
 	}
 
 	urls, ok := req.URL.Query()["url"]
