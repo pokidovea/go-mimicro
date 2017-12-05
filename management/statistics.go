@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,18 +30,51 @@ func (request ReceivedRequest) String() string {
 	)
 }
 
-func (request ReceivedRequest) matches(anotherRequest ReceivedRequest) bool {
-	if request.ServerName != "*" && request.ServerName != anotherRequest.ServerName {
+type requestPattern struct {
+	ServerName string
+	URL        string
+	Method     string
+}
+
+func (pattern requestPattern) matches(request ReceivedRequest) bool {
+	if pattern.ServerName != "*" && pattern.ServerName != request.ServerName {
 		return false
 	}
-	if request.URL != "*" && request.URL != anotherRequest.URL {
+	if pattern.URL != "*" && pattern.URL != request.URL {
 		return false
 	}
-	if request.Method != "*" && request.Method != anotherRequest.Method {
+	if pattern.Method != "*" && pattern.Method != request.Method {
 		return false
 	}
 
 	return true
+}
+
+func createRequestPatternFromQuery(URL *url.URL) requestPattern {
+	var pattern requestPattern
+
+	servers, ok := URL.Query()["server"]
+	if ok && len(servers) > 0 {
+		pattern.ServerName = servers[0]
+	} else {
+		pattern.ServerName = "*"
+	}
+
+	urls, ok := URL.Query()["url"]
+	if ok && len(urls) > 0 {
+		pattern.URL = urls[0]
+	} else {
+		pattern.URL = "*"
+	}
+
+	methods, ok := URL.Query()["method"]
+	if ok && len(methods) > 0 {
+		pattern.Method = strings.ToUpper(methods[0])
+	} else {
+		pattern.Method = "*"
+	}
+
+	return pattern
 }
 
 type requestsCounter map[ReceivedRequest]int
@@ -84,13 +118,13 @@ func (storage *statisticsStorage) add(request ReceivedRequest) {
 	storage.requests[request]++
 }
 
-func (storage *statisticsStorage) del(request ReceivedRequest) {
+func (storage *statisticsStorage) del(pattern requestPattern) {
 	storage.mutex.Lock()
 	defer storage.mutex.Unlock()
 
-	for collectedRequest := range storage.requests {
-		if request.matches(collectedRequest) {
-			delete(storage.requests, collectedRequest)
+	for request := range storage.requests {
+		if pattern.matches(request) {
+			delete(storage.requests, request)
 		}
 	}
 }
@@ -102,7 +136,7 @@ func (storage *statisticsStorage) get(request ReceivedRequest) int {
 	return storage.requests[request]
 }
 
-func (storage *statisticsStorage) iter(f func(request ReceivedRequest, count int) bool) {
+func (storage *statisticsStorage) iterate(f func(request ReceivedRequest, count int) bool) {
 	storage.mutex.RLock()
 	defer storage.mutex.RUnlock()
 
@@ -111,6 +145,21 @@ func (storage *statisticsStorage) iter(f func(request ReceivedRequest, count int
 			return
 		}
 	}
+}
+
+func (storage *statisticsStorage) filter(pattern requestPattern) requestsCounter {
+	records := make(requestsCounter)
+
+	storage.iterate(func(request ReceivedRequest, count int) bool {
+		if !pattern.matches(request) {
+			return true
+		}
+
+		records[request] = count
+
+		return true
+	})
+	return records
 }
 
 func (storage *statisticsStorage) run() {
@@ -131,46 +180,10 @@ func (storage *statisticsStorage) Stop() {
 	close(storage.RequestsChannel)
 }
 
-func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest) requestsCounter {
-	records := make(requestsCounter)
-
-	storage.iter(func(collectedRequest ReceivedRequest, count int) bool {
-		if !request.matches(collectedRequest) {
-			return true
-		}
-
-		records[collectedRequest] = count
-
-		return true
-	})
-	return records
-}
-
 func (storage *statisticsStorage) GetStatisticsHandler(w http.ResponseWriter, req *http.Request) {
-	var request ReceivedRequest
+	pattern := createRequestPatternFromQuery(req.URL)
 
-	servers, ok := req.URL.Query()["server"]
-	if ok && len(servers) > 0 {
-		request.ServerName = servers[0]
-	} else {
-		request.ServerName = "*"
-	}
-
-	urls, ok := req.URL.Query()["url"]
-	if ok && len(urls) > 0 {
-		request.URL = urls[0]
-	} else {
-		request.URL = "*"
-	}
-
-	methods, ok := req.URL.Query()["method"]
-	if ok && len(methods) > 0 {
-		request.Method = strings.ToUpper(methods[0])
-	} else {
-		request.Method = "*"
-	}
-
-	statistics := storage.getRequestStatistics(&request)
+	statistics := storage.filter(pattern)
 	payload, err := json.Marshal(statistics)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -180,4 +193,13 @@ func (storage *statisticsStorage) GetStatisticsHandler(w http.ResponseWriter, re
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(payload)
+}
+
+func (storage *statisticsStorage) DeleteStatisticsHandler(w http.ResponseWriter, req *http.Request) {
+	pattern := createRequestPatternFromQuery(req.URL)
+
+	storage.del(pattern)
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }

@@ -21,7 +21,7 @@ type Server struct {
 
 // NewServer creates a new management server record
 func NewServer(port int, collectStatistics bool) *Server {
-	server := Server{port, nil}
+	server := Server{Port: port}
 
 	if collectStatistics {
 		server.statisticsStorage = newStatisticsStorage()
@@ -50,7 +50,8 @@ func (server Server) startHTTPServer() *http.Server {
 	router := mux.NewRouter()
 
 	if server.statisticsStorage != nil {
-		router.HandleFunc("/statistics/get", server.statisticsStorage.GetStatisticsHandler)
+		router.HandleFunc("/statistics/get", server.statisticsStorage.GetStatisticsHandler).Methods("GET")
+		router.HandleFunc("/statistics/reset", server.statisticsStorage.DeleteStatisticsHandler).Methods("GET")
 	}
 
 	srv := &http.Server{

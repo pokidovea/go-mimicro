@@ -33,6 +33,42 @@ func TestAddAndGetRequests(t *testing.T) {
 	assert.Equal(t, 1, storage.get(request2))
 }
 
+func TestDeleteRequests(t *testing.T) {
+	storage := newStatisticsStorage()
+	request1 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/some_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+	request2 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+	request3 := ReceivedRequest{
+		ServerName: "Another server",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+
+	storage.add(request1)
+	storage.add(request2)
+	storage.add(request3)
+
+	pattern := requestPattern{
+		ServerName: "Simple server",
+		URL:        "*",
+		Method:     "*",
+	}
+
+	storage.del(pattern)
+
+	assert.Equal(t, 1, len(storage.requests))
+}
+
 func TestCollectFromChannel(t *testing.T) {
 	storage := newStatisticsStorage()
 
@@ -66,143 +102,6 @@ func TestStringifyRequest(t *testing.T) {
 		"server: Simple server; url: /some_url; method: POST; response status: 201",
 		fmt.Sprintf("%s", request),
 	)
-}
-
-func TestGetRequestStatisticsWhenNothingFound(t *testing.T) {
-	request := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/some_url",
-		Method:     "POST",
-		StatusCode: 0,
-	}
-
-	storage := newStatisticsStorage()
-
-	result := storage.getRequestStatistics(&request)
-
-	assert.Empty(t, result)
-}
-
-func TestGetRequestStatisticsByServerName(t *testing.T) {
-	request1 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/some_url",
-		Method:     "POST",
-		StatusCode: 0,
-	}
-	request2 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/another_url",
-		Method:     "GET",
-		StatusCode: 0,
-	}
-	request3 := ReceivedRequest{
-		ServerName: "Another server",
-		URL:        "/another_url",
-		Method:     "GET",
-		StatusCode: 0,
-	}
-
-	storage := newStatisticsStorage()
-	storage.add(request1)
-	storage.add(request1)
-	storage.add(request2)
-	storage.add(request3)
-
-	request := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "*",
-		Method:     "*",
-		StatusCode: 0,
-	}
-
-	result := storage.getRequestStatistics(&request)
-
-	expectedResult := requestsCounter{
-		request1: 2,
-		request2: 1,
-	}
-
-	assert.Equal(t, expectedResult, result)
-
-}
-
-func TestGetRequestStatisticsByURL(t *testing.T) {
-	request1 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/some_url",
-		Method:     "POST",
-		StatusCode: 0,
-	}
-	request2 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/another_url",
-		Method:     "GET",
-		StatusCode: 0,
-	}
-
-	storage := newStatisticsStorage()
-	storage.add(request1)
-	storage.add(request1)
-	storage.add(request2)
-
-	request := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/some_url",
-		Method:     "*",
-		StatusCode: 0,
-	}
-
-	result := storage.getRequestStatistics(&request)
-
-	expectedResult := requestsCounter{
-		request1: 2,
-	}
-
-	assert.Equal(t, expectedResult, result)
-}
-
-func TestGetRequestStatisticsByMethod(t *testing.T) {
-	request1 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/some_url",
-		Method:     "POST",
-		StatusCode: 0,
-	}
-	request2 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/another_url",
-		Method:     "POST",
-		StatusCode: 0,
-	}
-	request3 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/another_url",
-		Method:     "GET",
-		StatusCode: 0,
-	}
-
-	storage := newStatisticsStorage()
-	storage.add(request1)
-	storage.add(request1)
-	storage.add(request2)
-	storage.add(request3)
-
-	request := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "*",
-		Method:     "POST",
-		StatusCode: 0,
-	}
-
-	result := storage.getRequestStatistics(&request)
-
-	expectedResult := requestsCounter{
-		request1: 2,
-		request2: 1,
-	}
-
-	assert.Equal(t, expectedResult, result)
 }
 
 func TestGetStatisticsHandlerWhenNothingPassed(t *testing.T) {
@@ -394,7 +293,7 @@ func TestGetStatisticsHandlerWhenMethodPassed(t *testing.T) {
 	assert.Contains(t, expectedValues, string(body))
 }
 
-func TestGetStatisticsHandlerWhenPassedAllParamsPassed(t *testing.T) {
+func TestGetStatisticsHandlerWhenPassedAllParams(t *testing.T) {
 	router := mux.NewRouter()
 	storage := newStatisticsStorage()
 	request1 := ReceivedRequest{
@@ -441,4 +340,41 @@ func TestGetStatisticsHandlerWhenPassedAllParamsPassed(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	assert.Equal(t, `[{"server":"server_2","url":"/another_url","method":"POST","count":1}]`, string(body))
+}
+
+func TestDeleteStatisticsHandlerWhenNothingPassed(t *testing.T) {
+	router := mux.NewRouter()
+	storage := newStatisticsStorage()
+	request1 := ReceivedRequest{
+		ServerName: "server_1",
+		URL:        "/some_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+	request2 := ReceivedRequest{
+		ServerName: "server_2",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+
+	storage.add(request1)
+	storage.add(request1)
+	storage.add(request2)
+
+	router.HandleFunc("/url", storage.DeleteStatisticsHandler)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/url", nil)
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	assert.Equal(t, "text/plain", resp.Header.Get("Content-Type"))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	assert.Contains(t, "OK", string(body))
+
 }
