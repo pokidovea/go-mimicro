@@ -78,5 +78,7 @@ The management server can be accessed on port `4444` by default. You can change 
 
 ## Statistics of requests
 
-After passing a flag `-collect-statistics` you can get statistics of the requests by address `localhost:4444/statistics/get?server=<server name>&url=<url like in the config>&method=<method in any case>`. All parameters are optional. 
+After passing a flag `-collect-statistics` you can get statistics of the requests by address `localhost:4444/statistics/get?server=<server name>&url=<url like in the config>&method=<method in any case>`. All parameters are optional.
+
+In order to reset statistics make a GET request to `localhost:4444/statistics/reset?server=<server name>&url=<url like in the config>&method=<method in any case>`. All parameters are optional too.
 
