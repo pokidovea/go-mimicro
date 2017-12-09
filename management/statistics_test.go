@@ -33,11 +33,44 @@ func TestAddAndGetRequests(t *testing.T) {
 	assert.Equal(t, 1, storage.get(request2))
 }
 
+func TestDeleteRequests(t *testing.T) {
+	storage := newStatisticsStorage()
+	request1 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/some_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+	request2 := ReceivedRequest{
+		ServerName: "Simple server",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+	request3 := ReceivedRequest{
+		ServerName: "Another server",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+
+	storage.add(request1)
+	storage.add(request2)
+	storage.add(request3)
+
+	pattern := requestPattern{
+		ServerName: "Simple server",
+		URL:        "*",
+		Method:     "*",
+	}
+
+	storage.del(pattern)
+
+	assert.Equal(t, 1, len(storage.requests))
+}
+
 func TestCollectFromChannel(t *testing.T) {
 	storage := newStatisticsStorage()
-
-	done := make(chan bool, 1)
-	defer close(done)
 
 	request := ReceivedRequest{
 		ServerName: "Simple server",
@@ -45,11 +78,11 @@ func TestCollectFromChannel(t *testing.T) {
 		Method:     "POST",
 	}
 
-	go storage.Run(done)
+	storage.Start()
 
 	storage.RequestsChannel <- request
 	storage.RequestsChannel <- request
-	done <- true
+	storage.Stop()
 
 	time.Sleep(10 * time.Millisecond)
 
@@ -71,144 +104,49 @@ func TestStringifyRequest(t *testing.T) {
 	)
 }
 
-func TestGetRequestStatisticsWhenNothingFound(t *testing.T) {
-	request := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/some_url",
-		Method:     "POST",
-		StatusCode: 0,
-	}
-
+func TestGetStatisticsHandlerWhenNothingPassed(t *testing.T) {
+	router := mux.NewRouter()
 	storage := newStatisticsStorage()
-
-	result := storage.getRequestStatistics(&request)
-
-	assert.Empty(t, result)
-}
-
-func TestGetRequestStatisticsByServerName(t *testing.T) {
 	request1 := ReceivedRequest{
-		ServerName: "Simple server",
+		ServerName: "server_1",
 		URL:        "/some_url",
 		Method:     "POST",
 		StatusCode: 0,
 	}
 	request2 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/another_url",
-		Method:     "GET",
-		StatusCode: 0,
-	}
-	request3 := ReceivedRequest{
-		ServerName: "Another server",
+		ServerName: "server_2",
 		URL:        "/another_url",
 		Method:     "GET",
 		StatusCode: 0,
 	}
 
-	storage := newStatisticsStorage()
-	storage.add(request1)
-	storage.add(request1)
-	storage.add(request2)
-	storage.add(request3)
-
-	request := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "",
-		Method:     "",
-		StatusCode: 0,
-	}
-
-	result := storage.getRequestStatistics(&request)
-
-	expectedResult := requestsCounter{
-		request1: 2,
-		request2: 1,
-	}
-
-	assert.Equal(t, expectedResult, result)
-
-}
-
-func TestGetRequestStatisticsByURL(t *testing.T) {
-	request1 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/some_url",
-		Method:     "POST",
-		StatusCode: 0,
-	}
-	request2 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/another_url",
-		Method:     "GET",
-		StatusCode: 0,
-	}
-
-	storage := newStatisticsStorage()
 	storage.add(request1)
 	storage.add(request1)
 	storage.add(request2)
 
-	request := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/some_url",
-		Method:     "",
-		StatusCode: 0,
+	router.HandleFunc("/url", storage.GetStatisticsHandler)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/url", nil)
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	expectedValues := []string{
+		`[{"server":"server_1","url":"/some_url","method":"POST","count":2},` +
+			`{"server":"server_2","url":"/another_url","method":"GET","count":1}]`,
+		`[{"server":"server_2","url":"/another_url","method":"GET","count":1},` +
+			`{"server":"server_1","url":"/some_url","method":"POST","count":2}]`,
 	}
 
-	result := storage.getRequestStatistics(&request)
-
-	expectedResult := requestsCounter{
-		request1: 2,
-	}
-
-	assert.Equal(t, expectedResult, result)
+	assert.Contains(t, expectedValues, string(body))
 }
 
-func TestGetRequestStatisticsByMethod(t *testing.T) {
-	request1 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/some_url",
-		Method:     "POST",
-		StatusCode: 0,
-	}
-	request2 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/another_url",
-		Method:     "POST",
-		StatusCode: 0,
-	}
-	request3 := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "/another_url",
-		Method:     "GET",
-		StatusCode: 0,
-	}
-
-	storage := newStatisticsStorage()
-	storage.add(request1)
-	storage.add(request1)
-	storage.add(request2)
-	storage.add(request3)
-
-	request := ReceivedRequest{
-		ServerName: "Simple server",
-		URL:        "",
-		Method:     "POST",
-		StatusCode: 0,
-	}
-
-	result := storage.getRequestStatistics(&request)
-
-	expectedResult := requestsCounter{
-		request1: 2,
-		request2: 1,
-	}
-
-	assert.Equal(t, expectedResult, result)
-}
-
-func TestHTTPHandlerOnlyServerName(t *testing.T) {
+func TestGetStatisticsHandlerWhenServerNamePassed(t *testing.T) {
 	router := mux.NewRouter()
 	storage := newStatisticsStorage()
 	request1 := ReceivedRequest{
@@ -235,10 +173,10 @@ func TestHTTPHandlerOnlyServerName(t *testing.T) {
 	storage.add(request2)
 	storage.add(request3)
 
-	router.HandleFunc("/url/{serverName}", storage.HTTPHandler)
+	router.HandleFunc("/url", storage.GetStatisticsHandler)
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/url/server_1", nil)
+	req := httptest.NewRequest("GET", "/url?server=server_1", nil)
 
 	router.ServeHTTP(w, req)
 
@@ -248,14 +186,16 @@ func TestHTTPHandlerOnlyServerName(t *testing.T) {
 	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	expectedValues := []string{
-		`[{"url":"/some_url","method":"POST","count":2},{"url":"/another_url","method":"GET","count":1}]`,
-		`[{"url":"/another_url","method":"GET","count":1},{"url":"/some_url","method":"POST","count":2}]`,
+		`[{"server":"server_1","url":"/some_url","method":"POST","count":2},` +
+			`{"server":"server_1","url":"/another_url","method":"GET","count":1}]`,
+		`[{"server":"server_1","url":"/another_url","method":"GET","count":1},` +
+			`{"server":"server_1","url":"/some_url","method":"POST","count":2}]`,
 	}
 
 	assert.Contains(t, expectedValues, string(body))
 }
 
-func TestHTTPHandlerWhenURLPassed(t *testing.T) {
+func TestGetStatisticsHandlerWhenURLPassed(t *testing.T) {
 	router := mux.NewRouter()
 	storage := newStatisticsStorage()
 	request1 := ReceivedRequest{
@@ -271,7 +211,7 @@ func TestHTTPHandlerWhenURLPassed(t *testing.T) {
 		StatusCode: 0,
 	}
 	request3 := ReceivedRequest{
-		ServerName: "server_1",
+		ServerName: "server_2",
 		URL:        "/another_url",
 		Method:     "POST",
 		StatusCode: 0,
@@ -282,10 +222,10 @@ func TestHTTPHandlerWhenURLPassed(t *testing.T) {
 	storage.add(request2)
 	storage.add(request3)
 
-	router.HandleFunc("/url/{serverName}", storage.HTTPHandler)
+	router.HandleFunc("/url", storage.GetStatisticsHandler)
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/url/server_1?url=/another_url", nil)
+	req := httptest.NewRequest("GET", "/url?url=/another_url", nil)
 
 	router.ServeHTTP(w, req)
 
@@ -295,14 +235,16 @@ func TestHTTPHandlerWhenURLPassed(t *testing.T) {
 	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	expectedValues := []string{
-		`[{"url":"/another_url","method":"POST","count":1},{"url":"/another_url","method":"GET","count":2}]`,
-		`[{"url":"/another_url","method":"GET","count":2},{"url":"/another_url","method":"POST","count":1}]`,
+		`[{"server":"server_1","url":"/another_url","method":"GET","count":2},` +
+			`{"server":"server_2","url":"/another_url","method":"POST","count":1}]`,
+		`[{"server":"server_2","url":"/another_url","method":"POST","count":1},` +
+			`{"server":"server_1","url":"/another_url","method":"GET","count":2}]`,
 	}
 
 	assert.Contains(t, expectedValues, string(body))
 }
 
-func TestHTTPHandlerWhenMethodPassed(t *testing.T) {
+func TestGetStatisticsHandlerWhenMethodPassed(t *testing.T) {
 	router := mux.NewRouter()
 	storage := newStatisticsStorage()
 	request1 := ReceivedRequest{
@@ -318,7 +260,7 @@ func TestHTTPHandlerWhenMethodPassed(t *testing.T) {
 		StatusCode: 0,
 	}
 	request3 := ReceivedRequest{
-		ServerName: "server_1",
+		ServerName: "server_2",
 		URL:        "/another_url",
 		Method:     "POST",
 		StatusCode: 0,
@@ -327,11 +269,12 @@ func TestHTTPHandlerWhenMethodPassed(t *testing.T) {
 	storage.add(request1)
 	storage.add(request2)
 	storage.add(request3)
+	storage.add(request3)
 
-	router.HandleFunc("/url/{serverName}", storage.HTTPHandler)
+	router.HandleFunc("/url", storage.GetStatisticsHandler)
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/url/server_1?method=post", nil)
+	req := httptest.NewRequest("GET", "/url?method=post", nil)
 
 	router.ServeHTTP(w, req)
 
@@ -341,14 +284,16 @@ func TestHTTPHandlerWhenMethodPassed(t *testing.T) {
 	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	expectedValues := []string{
-		`[{"url":"/some_url","method":"POST","count":1},{"url":"/another_url","method":"POST","count":1}]`,
-		`[{"url":"/another_url","method":"POST","count":1},{"url":"/some_url","method":"POST","count":1}]`,
+		`[{"server":"server_1","url":"/some_url","method":"POST","count":1},` +
+			`{"server":"server_2","url":"/another_url","method":"POST","count":2}]`,
+		`[{"server":"server_2","url":"/another_url","method":"POST","count":2},` +
+			`{"server":"server_1","url":"/some_url","method":"POST","count":1}]`,
 	}
 
 	assert.Contains(t, expectedValues, string(body))
 }
 
-func TestHTTPHandlerWhenPassedBothMethodAndURL(t *testing.T) {
+func TestGetStatisticsHandlerWhenPassedAllParams(t *testing.T) {
 	router := mux.NewRouter()
 	storage := newStatisticsStorage()
 	request1 := ReceivedRequest{
@@ -360,24 +305,31 @@ func TestHTTPHandlerWhenPassedBothMethodAndURL(t *testing.T) {
 	request2 := ReceivedRequest{
 		ServerName: "server_1",
 		URL:        "/another_url",
-		Method:     "GET",
+		Method:     "POST",
 		StatusCode: 0,
 	}
 	request3 := ReceivedRequest{
-		ServerName: "server_1",
+		ServerName: "server_2",
 		URL:        "/another_url",
 		Method:     "POST",
+		StatusCode: 0,
+	}
+	request4 := ReceivedRequest{
+		ServerName: "server_2",
+		URL:        "/another_url",
+		Method:     "GET",
 		StatusCode: 0,
 	}
 
 	storage.add(request1)
 	storage.add(request2)
 	storage.add(request3)
+	storage.add(request4)
 
-	router.HandleFunc("/url/{serverName}", storage.HTTPHandler)
+	router.HandleFunc("/url", storage.GetStatisticsHandler)
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/url/server_1?method=post&url=/some_url", nil)
+	req := httptest.NewRequest("GET", "/url?server=server_2&method=post&url=/another_url", nil)
 
 	router.ServeHTTP(w, req)
 
@@ -387,5 +339,167 @@ func TestHTTPHandlerWhenPassedBothMethodAndURL(t *testing.T) {
 	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	assert.Equal(t, `[{"url":"/some_url","method":"POST","count":1}]`, string(body))
+	assert.Equal(t, `[{"server":"server_2","url":"/another_url","method":"POST","count":1}]`, string(body))
+}
+
+func TestDeleteStatisticsHandlerWhenNothingPassed(t *testing.T) {
+	router := mux.NewRouter()
+	storage := newStatisticsStorage()
+	request1 := ReceivedRequest{
+		ServerName: "server_1",
+		URL:        "/some_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+	request2 := ReceivedRequest{
+		ServerName: "server_2",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+
+	storage.add(request1)
+	storage.add(request1)
+	storage.add(request2)
+
+	router.HandleFunc("/url", storage.DeleteStatisticsHandler)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/url", nil)
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	assert.Equal(t, "text/plain", resp.Header.Get("Content-Type"))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	assert.Contains(t, "OK", string(body))
+
+	assert.Len(t, storage.requests, 0)
+}
+
+func TestDeleteStatisticsHandlerWhenServerNamePassed(t *testing.T) {
+	router := mux.NewRouter()
+	storage := newStatisticsStorage()
+	request1 := ReceivedRequest{
+		ServerName: "server_1",
+		URL:        "/some_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+	request2 := ReceivedRequest{
+		ServerName: "server_2",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+
+	storage.add(request1)
+	storage.add(request1)
+	storage.add(request2)
+
+	router.HandleFunc("/url", storage.DeleteStatisticsHandler)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/url?server=server_2", nil)
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	assert.Equal(t, "text/plain", resp.Header.Get("Content-Type"))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	assert.Contains(t, "OK", string(body))
+
+	assert.Equal(t, requestsCounter{request1: 2}, storage.requests)
+}
+
+func TestDeleteStatisticsHandlerWhenURLPassed(t *testing.T) {
+	router := mux.NewRouter()
+	storage := newStatisticsStorage()
+	request1 := ReceivedRequest{
+		ServerName: "server_1",
+		URL:        "/some_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+	request2 := ReceivedRequest{
+		ServerName: "server_2",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+	request3 := ReceivedRequest{
+		ServerName: "server_3",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+	storage.add(request1)
+	storage.add(request2)
+	storage.add(request3)
+
+	router.HandleFunc("/url", storage.DeleteStatisticsHandler)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/url?url=/another_url", nil)
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	assert.Equal(t, "text/plain", resp.Header.Get("Content-Type"))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	assert.Contains(t, "OK", string(body))
+
+	assert.Equal(t, requestsCounter{request1: 1}, storage.requests)
+}
+
+func TestDeleteStatisticsHandlerWhenMethodPassed(t *testing.T) {
+	router := mux.NewRouter()
+	storage := newStatisticsStorage()
+	request1 := ReceivedRequest{
+		ServerName: "server_1",
+		URL:        "/some_url",
+		Method:     "POST",
+		StatusCode: 0,
+	}
+	request2 := ReceivedRequest{
+		ServerName: "server_2",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+	request3 := ReceivedRequest{
+		ServerName: "server_3",
+		URL:        "/another_url",
+		Method:     "GET",
+		StatusCode: 0,
+	}
+	storage.add(request1)
+	storage.add(request2)
+	storage.add(request3)
+
+	router.HandleFunc("/url", storage.DeleteStatisticsHandler)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/url?method=post", nil)
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	assert.Equal(t, "text/plain", resp.Header.Get("Content-Type"))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	assert.Contains(t, "OK", string(body))
+
+	assert.Equal(t, requestsCounter{request2: 1, request3: 1}, storage.requests)
 }

@@ -21,7 +21,7 @@ type Server struct {
 
 // NewServer creates a new management server record
 func NewServer(port int, collectStatistics bool) *Server {
-	server := Server{port, nil}
+	server := Server{Port: port}
 
 	if collectStatistics {
 		server.statisticsStorage = newStatisticsStorage()
@@ -50,7 +50,8 @@ func (server Server) startHTTPServer() *http.Server {
 	router := mux.NewRouter()
 
 	if server.statisticsStorage != nil {
-		router.HandleFunc("/servers/{serverName}", server.statisticsStorage.HTTPHandler)
+		router.HandleFunc("/statistics/get", server.statisticsStorage.GetStatisticsHandler).Methods("GET")
+		router.HandleFunc("/statistics/reset", server.statisticsStorage.DeleteStatisticsHandler).Methods("GET")
 	}
 
 	srv := &http.Server{
@@ -74,10 +75,8 @@ func (server Server) startHTTPServer() *http.Server {
 func (server Server) Serve(wg *sync.WaitGroup) {
 	log.Printf("[Management] Starting...")
 
-	stopStatisticsStorage := make(chan bool)
-	defer close(stopStatisticsStorage)
 	if server.statisticsStorage != nil {
-		go server.statisticsStorage.Run(stopStatisticsStorage)
+		server.statisticsStorage.Start()
 	}
 
 	interrupt := make(chan os.Signal, 1)
@@ -88,7 +87,9 @@ func (server Server) Serve(wg *sync.WaitGroup) {
 	srv := server.startHTTPServer()
 	<-interrupt
 
-	stopStatisticsStorage <- true
+	if server.statisticsStorage != nil {
+		server.statisticsStorage.Stop()
+	}
 
 	log.Printf("[Management] Stopping...")
 

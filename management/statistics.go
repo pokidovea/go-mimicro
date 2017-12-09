@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/gorilla/mux"
 )
 
 // ReceivedRequest represents a request that was sent to a mock server
@@ -31,6 +30,53 @@ func (request ReceivedRequest) String() string {
 	)
 }
 
+type requestPattern struct {
+	ServerName string
+	URL        string
+	Method     string
+}
+
+func (pattern requestPattern) matches(request ReceivedRequest) bool {
+	if pattern.ServerName != "*" && pattern.ServerName != request.ServerName {
+		return false
+	}
+	if pattern.URL != "*" && pattern.URL != request.URL {
+		return false
+	}
+	if pattern.Method != "*" && pattern.Method != request.Method {
+		return false
+	}
+
+	return true
+}
+
+func createRequestPatternFromQuery(URL *url.URL) requestPattern {
+	var pattern requestPattern
+
+	servers, ok := URL.Query()["server"]
+	if ok && len(servers) > 0 {
+		pattern.ServerName = servers[0]
+	} else {
+		pattern.ServerName = "*"
+	}
+
+	urls, ok := URL.Query()["url"]
+	if ok && len(urls) > 0 {
+		pattern.URL = urls[0]
+	} else {
+		pattern.URL = "*"
+	}
+
+	methods, ok := URL.Query()["method"]
+	if ok && len(methods) > 0 {
+		pattern.Method = strings.ToUpper(methods[0])
+	} else {
+		pattern.Method = "*"
+	}
+
+	return pattern
+}
+
 type requestsCounter map[ReceivedRequest]int
 
 func (counter requestsCounter) MarshalJSON() ([]byte, error) {
@@ -39,6 +85,7 @@ func (counter requestsCounter) MarshalJSON() ([]byte, error) {
 	count := 0
 	for request, requestsCount := range counter {
 		buffer.WriteString("{")
+		buffer.WriteString(fmt.Sprintf("\"server\":\"%s\",", request.ServerName))
 		buffer.WriteString(fmt.Sprintf("\"url\":\"%s\",", request.URL))
 		buffer.WriteString(fmt.Sprintf("\"method\":\"%s\",", request.Method))
 		buffer.WriteString(fmt.Sprintf("\"count\":%s", strconv.Itoa(requestsCount)))
@@ -61,7 +108,7 @@ type statisticsStorage struct {
 func newStatisticsStorage() *statisticsStorage {
 	storage := new(statisticsStorage)
 	storage.requests = make(requestsCounter)
-	storage.RequestsChannel = make(chan ReceivedRequest)
+	storage.RequestsChannel = make(chan ReceivedRequest, 100)
 	return storage
 }
 
@@ -71,6 +118,17 @@ func (storage *statisticsStorage) add(request ReceivedRequest) {
 	storage.requests[request]++
 }
 
+func (storage *statisticsStorage) del(pattern requestPattern) {
+	storage.mutex.Lock()
+	defer storage.mutex.Unlock()
+
+	for request := range storage.requests {
+		if pattern.matches(request) {
+			delete(storage.requests, request)
+		}
+	}
+}
+
 func (storage *statisticsStorage) get(request ReceivedRequest) int {
 	storage.mutex.RLock()
 	defer storage.mutex.RUnlock()
@@ -78,7 +136,7 @@ func (storage *statisticsStorage) get(request ReceivedRequest) int {
 	return storage.requests[request]
 }
 
-func (storage *statisticsStorage) iter(f func(request ReceivedRequest, count int) bool) {
+func (storage *statisticsStorage) iterate(f func(request ReceivedRequest, count int) bool) {
 	storage.mutex.RLock()
 	defer storage.mutex.RUnlock()
 
@@ -89,63 +147,43 @@ func (storage *statisticsStorage) iter(f func(request ReceivedRequest, count int
 	}
 }
 
-func (storage *statisticsStorage) Run(done <-chan bool) {
-	log.Printf("[Statistics storage] Starting...")
-
-	defer log.Printf("[Statistics storage] Stopped")
-
-	for {
-		select {
-		case request, ok := <-storage.RequestsChannel:
-			if !ok {
-				return
-			}
-			storage.add(request)
-		case <-done:
-			return
-		}
-	}
-}
-
-func (storage *statisticsStorage) getRequestStatistics(request *ReceivedRequest) requestsCounter {
+func (storage *statisticsStorage) filter(pattern requestPattern) requestsCounter {
 	records := make(requestsCounter)
 
-	storage.iter(func(collectedRequest ReceivedRequest, count int) bool {
-		if request.ServerName != collectedRequest.ServerName {
-			return true
-		}
-		if request.URL != "" && request.URL != collectedRequest.URL {
-			return true
-		}
-		if request.Method != "" && request.Method != collectedRequest.Method {
+	storage.iterate(func(request ReceivedRequest, count int) bool {
+		if !pattern.matches(request) {
 			return true
 		}
 
-		records[collectedRequest] = count
+		records[request] = count
 
 		return true
 	})
 	return records
 }
 
-func (storage *statisticsStorage) HTTPHandler(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	serverName := vars["serverName"]
+func (storage *statisticsStorage) run() {
+	log.Printf("[Statistics storage] Starting...")
 
-	request := ReceivedRequest{
-		ServerName: serverName,
-	}
+	defer log.Printf("[Statistics storage] Stopped")
 
-	urls, ok := req.URL.Query()["url"]
-	if ok && len(urls) > 0 {
-		request.URL = urls[0]
+	for request := range storage.RequestsChannel {
+		storage.add(request)
 	}
-	methods, ok := req.URL.Query()["method"]
-	if ok && len(methods) > 0 {
-		request.Method = strings.ToUpper(methods[0])
-	}
+}
 
-	statistics := storage.getRequestStatistics(&request)
+func (storage *statisticsStorage) Start() {
+	go storage.run()
+}
+
+func (storage *statisticsStorage) Stop() {
+	close(storage.RequestsChannel)
+}
+
+func (storage *statisticsStorage) GetStatisticsHandler(w http.ResponseWriter, req *http.Request) {
+	pattern := createRequestPatternFromQuery(req.URL)
+
+	statistics := storage.filter(pattern)
 	payload, err := json.Marshal(statistics)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -155,4 +193,13 @@ func (storage *statisticsStorage) HTTPHandler(w http.ResponseWriter, req *http.R
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(payload)
+}
+
+func (storage *statisticsStorage) DeleteStatisticsHandler(w http.ResponseWriter, req *http.Request) {
+	pattern := createRequestPatternFromQuery(req.URL)
+
+	storage.del(pattern)
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }
