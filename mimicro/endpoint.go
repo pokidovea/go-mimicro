@@ -1,4 +1,4 @@
-package mockServer
+package mimicro
 
 import (
 	"net/http"
@@ -6,7 +6,7 @@ import (
 
 type httpHandler = func(w http.ResponseWriter, req *http.Request)
 
-// Endpoint represents an URL, wich accepts one or several types of requests
+// Endpoint represents an URL, which accepts one or several types of requests
 type Endpoint struct {
 	URL    string    `json:"url"`
 	GET    *Response `json:"GET"`
@@ -16,8 +16,7 @@ type Endpoint struct {
 	DELETE *Response `json:"DELETE"`
 }
 
-// GetHandler returns a function to register it as a http handler
-func (endpoint Endpoint) GetHandler(logWriter RequestLogWriter, serverName string) httpHandler {
+func (endpoint Endpoint) getHandler(logWriter RequestLogWriter, serverName string) httpHandler {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var response *Response
 

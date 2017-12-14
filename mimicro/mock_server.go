@@ -1,4 +1,4 @@
-package mockServer
+package mimicro
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// RequestLogWriter is signature of method, wich should be passed to the mock server to write requests log
+// RequestLogWriter is signature of method, which should be passed to the mock server to write requests log
 type RequestLogWriter func(serverName, URL, method string, statusCode int)
 
 // MockServer represents a standalone mock server with its name, port and collection of endpoints
@@ -27,7 +27,7 @@ func (mockServer MockServer) startHTTPServer(logWriter RequestLogWriter) *http.S
 	router := mux.NewRouter()
 
 	for _, endpoint := range mockServer.Endpoints {
-		router.HandleFunc(endpoint.URL, endpoint.GetHandler(logWriter, mockServer.Name))
+		router.HandleFunc(endpoint.URL, endpoint.getHandler(logWriter, mockServer.Name))
 	}
 
 	srv := &http.Server{

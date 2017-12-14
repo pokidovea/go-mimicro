@@ -8,8 +8,7 @@ import (
 	"sync"
 
 	"github.com/equinox-io/equinox"
-	"github.com/pokidovea/mimicro/management"
-	"github.com/pokidovea/mimicro/mockServer"
+	"github.com/pokidovea/mimicro/mimicro"
 )
 
 const appID = "app_cub6zaUSQM5"
@@ -51,7 +50,7 @@ func equinoxUpdate() error {
 }
 
 func checkConfig(configPath string) error {
-	err := mockServer.CheckConfig(configPath)
+	err := mimicro.CheckConfig(configPath)
 
 	if err == nil {
 		fmt.Println("Config is valid")
@@ -99,7 +98,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	serverCollection, err := mockServer.Load(*configPath)
+	serverCollection, err := mimicro.LoadConfig(*configPath)
 
 	if err != nil {
 		log.Printf(err.Error())
@@ -108,7 +107,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	managementServer := management.NewServer(*managementPort, *collectStatistics)
+	managementServer := mimicro.NewManagementServer(*managementPort, *collectStatistics)
 	wg.Add(1)
 	go managementServer.Serve(&wg)
 

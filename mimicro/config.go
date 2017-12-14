@@ -1,4 +1,4 @@
-package mockServer
+package mimicro
 
 import (
 	"errors"
@@ -55,9 +55,9 @@ func parseConfig(data []byte) (*ServerCollection, error) {
 	return &serverCollection, nil
 }
 
-// Load function loads the config from file into the ServerCollection structure
+// LoadConfig function loads the config from file into the ServerCollection structure
 // Returns ServerCollection structure
-func Load(configPath string) (*ServerCollection, error) {
+func LoadConfig(configPath string) (*ServerCollection, error) {
 	data, err := ioutil.ReadFile(configPath)
 
 	if err != nil {

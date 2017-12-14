@@ -1,4 +1,4 @@
-package mockServer
+package mimicro
 
 import (
 	"net/http"
@@ -50,7 +50,7 @@ func TestLoadConfigFromFile(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	configPath := path.Join(path.Dir(filename), "..", "examples", "config.yaml")
 
-	serverCollection, err := Load(configPath)
+	serverCollection, err := LoadConfig(configPath)
 
 	assert.Nil(t, err)
 	assert.Equal(t, len(serverCollection.Servers), 1)

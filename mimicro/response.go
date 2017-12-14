@@ -1,4 +1,4 @@
-package mockServer
+package mimicro
 
 import (
 	"bytes"

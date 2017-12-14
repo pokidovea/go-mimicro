@@ -1,4 +1,4 @@
-package management
+package mimicro
 
 import (
 	"context"
@@ -13,15 +13,15 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Server represents a server, responsible for statistics and administration
-type Server struct {
+// ManagementServer represents a server, responsible for statistics and administration
+type ManagementServer struct {
 	Port              int
 	statisticsStorage *statisticsStorage
 }
 
-// NewServer creates a new management server record
-func NewServer(port int, collectStatistics bool) *Server {
-	server := Server{Port: port}
+// NewManagementServer creates a new management server record
+func NewManagementServer(port int, collectStatistics bool) *ManagementServer {
+	server := ManagementServer{Port: port}
 
 	if collectStatistics {
 		server.statisticsStorage = newStatisticsStorage()
@@ -31,7 +31,7 @@ func NewServer(port int, collectStatistics bool) *Server {
 }
 
 // WriteRequestLog is called by mock servers to write request into log and statistics into storage
-func (server *Server) WriteRequestLog(serverName, URL, method string, statusCode int) {
+func (server *ManagementServer) WriteRequestLog(serverName, URL, method string, statusCode int) {
 	request := ReceivedRequest{
 		ServerName: serverName,
 		URL:        URL,
@@ -46,7 +46,7 @@ func (server *Server) WriteRequestLog(serverName, URL, method string, statusCode
 	}
 }
 
-func (server Server) startHTTPServer() *http.Server {
+func (server ManagementServer) startHTTPServer() *http.Server {
 	router := mux.NewRouter()
 
 	if server.statisticsStorage != nil {
@@ -72,7 +72,7 @@ func (server Server) startHTTPServer() *http.Server {
 }
 
 // Serve method starts the server and does some operations after it stops
-func (server Server) Serve(wg *sync.WaitGroup) {
+func (server ManagementServer) Serve(wg *sync.WaitGroup) {
 	log.Printf("[Management] Starting...")
 
 	if server.statisticsStorage != nil {

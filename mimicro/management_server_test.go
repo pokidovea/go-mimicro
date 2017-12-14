@@ -1,4 +1,4 @@
-package management
+package mimicro
 
 import (
 	"net/http"
@@ -8,27 +8,27 @@ import (
 )
 
 func TestNewServerWithoutStatistics(t *testing.T) {
-	server := NewServer(4534, false)
+	server := NewManagementServer(4534, false)
 
 	assert.Equal(t, server.Port, 4534)
 	assert.Nil(t, server.statisticsStorage)
 }
 
 func TestNewServerWithStatistics(t *testing.T) {
-	server := NewServer(4534, true)
+	server := NewManagementServer(4534, true)
 
 	assert.Equal(t, server.Port, 4534)
 	assert.NotNil(t, server.statisticsStorage)
 }
 
 func TestWriteRequestLogWithoutStatistics(t *testing.T) {
-	server := NewServer(4534, false)
+	server := NewManagementServer(4534, false)
 
 	server.WriteRequestLog("server_1", "/some/url", "GET", http.StatusOK)
 }
 
 func TestWriteRequestLogWithStatistics(t *testing.T) {
-	server := NewServer(4534, true)
+	server := NewManagementServer(4534, true)
 
 	// make the channel buffered to test in one thread
 	server.statisticsStorage.RequestsChannel = make(chan ReceivedRequest, 1)
