@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-type httpHandler = func(w http.ResponseWriter, req *http.Request)
+type HttpHandler = func(w http.ResponseWriter, req *http.Request)
 
 // Endpoint represents an URL, which accepts one or several types of requests
 type Endpoint struct {
@@ -16,7 +16,8 @@ type Endpoint struct {
 	DELETE *Response `json:"DELETE"`
 }
 
-func (endpoint Endpoint) getHandler(logWriter RequestLogWriter, serverName string) httpHandler {
+// GetHandler returns a function to register it as a http handler
+func (endpoint Endpoint) GetHandler(logWriter RequestLogWriter, serverName string) HttpHandler {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var response *Response
 

@@ -58,7 +58,7 @@ DELETE:
 	logMessage := new(responseLogMessage)
 
 	methods := [...]string{"GET", "POST", "PATCH", "PUT", "DELETE"}
-	handler := endpoint.getHandler(logMessage.writeResponseLog, "server_name")
+	handler := endpoint.GetHandler(logMessage.writeResponseLog, "server_name")
 
 	for _, method := range methods {
 		w := httptest.NewRecorder()
@@ -96,7 +96,7 @@ GET:
 	logMessage := new(responseLogMessage)
 
 	methods := [...]string{"POST", "PATCH", "PUT", "DELETE"}
-	handler := endpoint.getHandler(logMessage.writeResponseLog, "server_name")
+	handler := endpoint.GetHandler(logMessage.writeResponseLog, "server_name")
 
 	for _, method := range methods {
 		w := httptest.NewRecorder()

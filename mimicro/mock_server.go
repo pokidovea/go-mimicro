@@ -27,7 +27,7 @@ func (mockServer MockServer) startHTTPServer(logWriter RequestLogWriter) *http.S
 	router := mux.NewRouter()
 
 	for _, endpoint := range mockServer.Endpoints {
-		router.HandleFunc(endpoint.URL, endpoint.getHandler(logWriter, mockServer.Name))
+		router.HandleFunc(endpoint.URL, endpoint.GetHandler(logWriter, mockServer.Name))
 	}
 
 	srv := &http.Server{
