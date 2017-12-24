@@ -15,13 +15,14 @@ import (
 
 // ManagementServer represents a server, responsible for statistics and administration
 type ManagementServer struct {
-	Port              int
-	statisticsStorage *statisticsStorage
+	Port                int
+	statisticsStorage   *statisticsStorage
+	substitutionStorage *SubstitutionStorage
 }
 
 // NewManagementServer creates a new management server record
-func NewManagementServer(port int, collectStatistics bool) *ManagementServer {
-	server := ManagementServer{Port: port}
+func NewManagementServer(port int, collectStatistics bool, substitutionStorage *SubstitutionStorage) *ManagementServer {
+	server := ManagementServer{Port: port, substitutionStorage: substitutionStorage}
 
 	if collectStatistics {
 		server.statisticsStorage = newStatisticsStorage()

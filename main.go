@@ -98,6 +98,8 @@ func main() {
 		os.Exit(0)
 	}
 
+	substitutionStorage := mimicro.NewSubstitutionStorage()
+
 	serverCollection, err := mimicro.LoadConfig(*configPath)
 
 	if err != nil {
@@ -107,7 +109,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	managementServer := mimicro.NewManagementServer(*managementPort, *collectStatistics)
+	managementServer := mimicro.NewManagementServer(*managementPort, *collectStatistics, substitutionStorage)
 	wg.Add(1)
 	go managementServer.Serve(&wg)
 

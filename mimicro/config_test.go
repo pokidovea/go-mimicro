@@ -40,7 +40,7 @@ servers:
 	expectedError := `servers.0.endpoints.0.GET: Must validate one and only one schema (oneOf)
 servers.0.endpoints.0.GET.status_code: Invalid type. Expected: integer, given: string
 `
-	err := validateSchema([]byte(config))
+	err := validateConfigSchema([]byte(config))
 
 	assert.NotNil(t, err)
 	assert.Equal(t, expectedError, err.Error())
