@@ -8,27 +8,32 @@ import (
 )
 
 func TestNewServerWithoutStatistics(t *testing.T) {
-	server := NewManagementServer(4534, false)
+	substitutionStorage := NewSubstitutionStorage()
+	server := NewManagementServer(4534, false, substitutionStorage)
 
-	assert.Equal(t, server.Port, 4534)
+	assert.Equal(t, 4534, server.Port)
 	assert.Nil(t, server.statisticsStorage)
+	assert.Equal(t, substitutionStorage, server.substitutionStorage)
 }
 
 func TestNewServerWithStatistics(t *testing.T) {
-	server := NewManagementServer(4534, true)
+	substitutionStorage := NewSubstitutionStorage()
+	server := NewManagementServer(4534, true, substitutionStorage)
 
-	assert.Equal(t, server.Port, 4534)
+	assert.Equal(t, 4534, server.Port)
 	assert.NotNil(t, server.statisticsStorage)
 }
 
 func TestWriteRequestLogWithoutStatistics(t *testing.T) {
-	server := NewManagementServer(4534, false)
+	substitutionStorage := NewSubstitutionStorage()
+	server := NewManagementServer(4534, false, substitutionStorage)
 
 	server.WriteRequestLog("server_1", "/some/url", "GET", http.StatusOK)
 }
 
 func TestWriteRequestLogWithStatistics(t *testing.T) {
-	server := NewManagementServer(4534, true)
+	substitutionStorage := NewSubstitutionStorage()
+	server := NewManagementServer(4534, true, substitutionStorage)
 
 	// make the channel buffered to test in one thread
 	server.statisticsStorage.RequestsChannel = make(chan ReceivedRequest, 1)

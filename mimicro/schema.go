@@ -100,7 +100,7 @@ var configSchema = fmt.Sprintf(`
                 {"$ref": "#/definitions/templateResponse"},
                 {"$ref": "#/definitions/fileResponse"}
             ]
-        }
+        },
 		%s
     }
 }
