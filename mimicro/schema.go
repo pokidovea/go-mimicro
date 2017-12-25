@@ -51,7 +51,7 @@ var responseDefinitions = `
 }
 `
 
-var configSchema = fmt.Sprintf(`
+var ConfigSchema = fmt.Sprintf(`
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
@@ -106,7 +106,7 @@ var configSchema = fmt.Sprintf(`
 }
 `, responseDefinitions)
 
-var substitutionSchema = fmt.Sprintf(`
+var AddSubstitutionSchema = fmt.Sprintf(`
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
@@ -127,3 +127,16 @@ var substitutionSchema = fmt.Sprintf(`
 	}
 }
 `, responseDefinitions)
+
+var DeleteSubstitutionSchema = `
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "additionalProperties": false,
+	"properties": {
+		"server_name": {"type": "string"},
+		"url": {"type": "string"},
+		"method": {"enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]}
+	}
+}
+`

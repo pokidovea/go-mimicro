@@ -2,13 +2,9 @@ package mimicro
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"sync"
-
-	"github.com/xeipuuv/gojsonschema"
 )
 
 type keyStruct struct {
@@ -39,7 +35,7 @@ func (storage *SubstitutionStorage) makeKey(serverName, URL, method string) keyS
 	return keyStruct{ServerName: serverName, URL: URL, Method: method}
 }
 
-func (storage *SubstitutionStorage) Add(serverName, URL, method string, response *Response) {
+func (storage *SubstitutionStorage) add(serverName, URL, method string, response *Response) {
 	storage.mutex.Lock()
 	defer storage.mutex.Unlock()
 
@@ -57,34 +53,11 @@ func (storage *SubstitutionStorage) Get(serverName, URL, method string) *Respons
 	return storage.substitutions[key]
 }
 
-func (storage *SubstitutionStorage) Del(serverName, URL, method string) {
+func (storage *SubstitutionStorage) del(key keyStruct) {
 	storage.mutex.Lock()
 	defer storage.mutex.Unlock()
 
-	key := storage.makeKey(serverName, URL, method)
-
 	delete(storage.substitutions, key)
-}
-
-func validateSubstitutionSchema(data []byte) error {
-	schemaLoader := gojsonschema.NewStringLoader(substitutionSchema)
-	documentLoader := gojsonschema.NewStringLoader(string(data))
-
-	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
-	if err != nil {
-		return err
-	}
-
-	if result.Valid() {
-		return nil
-
-	}
-	var errorString string
-	for _, desc := range result.Errors() {
-		errorString = fmt.Sprintf("%s%s\n", errorString, desc)
-	}
-
-	return errors.New(errorString)
 }
 
 func (storage *SubstitutionStorage) AddSubstitutionHandler(w http.ResponseWriter, req *http.Request) {
@@ -95,7 +68,7 @@ func (storage *SubstitutionStorage) AddSubstitutionHandler(w http.ResponseWriter
 		return
 	}
 
-	err = validateSubstitutionSchema(body)
+	err = ValidateSchema(body, AddSubstitutionSchema)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
@@ -110,7 +83,35 @@ func (storage *SubstitutionStorage) AddSubstitutionHandler(w http.ResponseWriter
 		return
 	}
 
-	storage.Add(request.ServerName, request.URL, request.Method, request.Response)
+	storage.add(request.ServerName, request.URL, request.Method, request.Response)
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (storage *SubstitutionStorage) DeleteSubstitutionHandler(w http.ResponseWriter, req *http.Request) {
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal server error"))
+		return
+	}
+
+	err = ValidateSchema(body, DeleteSubstitutionSchema)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	var key keyStruct
+	err = json.Unmarshal(body, key)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal server error"))
+		return
+	}
+
+	storage.del(key)
 
 	w.WriteHeader(http.StatusOK)
 }

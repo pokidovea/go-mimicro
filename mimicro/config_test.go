@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/ghodss/yaml"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,7 +41,10 @@ servers:
 	expectedError := `servers.0.endpoints.0.GET: Must validate one and only one schema (oneOf)
 servers.0.endpoints.0.GET.status_code: Invalid type. Expected: integer, given: string
 `
-	err := validateConfigSchema([]byte(config))
+	jsonData, err := yaml.YAMLToJSON([]byte(config))
+	assert.Nil(t, err)
+
+	err = ValidateSchema(jsonData, ConfigSchema)
 
 	assert.NotNil(t, err)
 	assert.Equal(t, expectedError, err.Error())
