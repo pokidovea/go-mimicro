@@ -7,7 +7,7 @@ before_install:
 
 script:
   - ./.ci/run_tests.sh
-  - go build
+  - go build -o mimicro_bin
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
