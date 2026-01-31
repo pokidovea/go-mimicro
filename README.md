@@ -41,7 +41,7 @@ go build -o mimicro
 ./mimicro -spec <path-or-url-to-openapi.yaml>
 ```
 
-### With custom port
+### With a custom port
 
 ```bash
 ./mimicro -spec openapi.yaml -port 3000
@@ -175,7 +175,7 @@ curl http://localhost:8080/users/abc
 }
 ```
 
-#### Missing required field in request body
+#### Missing the required field in the request body
 
 ```bash
 curl -X POST http://localhost:8080/users \
@@ -189,7 +189,7 @@ curl -X POST http://localhost:8080/users \
 }
 ```
 
-#### Method not allowed
+#### Method is not allowed
 
 ```bash
 curl -X PUT http://localhost:8080/users
@@ -204,7 +204,7 @@ curl -X PUT http://localhost:8080/users
 ## Data Generation Rules
 
 ### Strings
-- Default length: 5-20 characters
+- Default length: 5–20 characters
 - Respects `minLength` and `maxLength` constraints
 - Special formats:
   - `date`: YYYY-MM-DD

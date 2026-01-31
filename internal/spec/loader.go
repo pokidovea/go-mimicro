@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -32,7 +33,7 @@ func (l *Loader) Load(path string) (*OpenAPISpec, error) {
 		return nil, err
 	}
 
-	return l.parse(data, path)
+	return l.parse(data)
 }
 
 func (l *Loader) loadFromFile(path string) ([]byte, error) {
@@ -44,7 +45,13 @@ func (l *Loader) loadFromURL(url string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch URL: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Printf("Failed to close response body: %v", err)
+			return
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP error: %s", resp.Status)
@@ -53,7 +60,7 @@ func (l *Loader) loadFromURL(url string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func (l *Loader) parse(data []byte, path string) (*OpenAPISpec, error) {
+func (l *Loader) parse(data []byte) (*OpenAPISpec, error) {
 	var spec OpenAPISpec
 
 	// Try JSON first

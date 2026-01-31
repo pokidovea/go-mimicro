@@ -76,9 +76,13 @@ func (s *Server) handleMethodNotAllowed(path string, pathItem spec.PathItem) htt
 			log.Printf("405 Method Not Allowed: %s %s from %s", r.Method, path, r.RemoteAddr)
 			w.Header().Set("Allow", joinMethods(allowed))
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			json.NewEncoder(w).Encode(map[string]string{
+			err := json.NewEncoder(w).Encode(map[string]string{
 				"error": fmt.Sprintf("Method %s not allowed. Allowed methods: %s", r.Method, joinMethods(allowed)),
 			})
+			if err != nil {
+				log.Printf("Error encoding error response: %v", err)
+				return
+			}
 		}
 	}
 }
@@ -123,9 +127,13 @@ func (s *Server) handleRequest(path, method string, operation *spec.Operation) h
 			log.Printf("Validation error (path params): %v", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{
+			err := json.NewEncoder(w).Encode(map[string]string{
 				"error": err.Error(),
 			})
+			if err != nil {
+				log.Printf("Error encoding error response: %v", err)
+				return
+			}
 			return
 		}
 
@@ -134,9 +142,13 @@ func (s *Server) handleRequest(path, method string, operation *spec.Operation) h
 			log.Printf("Validation error (query params): %v", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{
+			err := json.NewEncoder(w).Encode(map[string]string{
 				"error": err.Error(),
 			})
+			if err != nil {
+				log.Printf("Error encoding error response: %v", err)
+				return
+			}
 			return
 		}
 
@@ -145,7 +157,11 @@ func (s *Server) handleRequest(path, method string, operation *spec.Operation) h
 		var bodyBytes []byte
 		if r.Body != nil {
 			bodyBytes, _ = io.ReadAll(r.Body)
-			r.Body.Close()
+			err := r.Body.Close()
+			if err != nil {
+				log.Printf("Failed to close request body: %v", err)
+				return
+			}
 		}
 		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
@@ -153,9 +169,13 @@ func (s *Server) handleRequest(path, method string, operation *spec.Operation) h
 			log.Printf("Validation error (request body): %v", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{
+			err := json.NewEncoder(w).Encode(map[string]string{
 				"error": err.Error(),
 			})
+			if err != nil {
+				log.Printf("Error encoding error response: %v", err)
+				return
+			}
 			return
 		}
 
@@ -166,7 +186,11 @@ func (s *Server) handleRequest(path, method string, operation *spec.Operation) h
 		for code, resp := range operation.Responses {
 			if code[0] == '2' { // 2xx success codes
 				response = &resp
-				fmt.Sscanf(code, "%d", &statusCode)
+				_, err := fmt.Sscanf(code, "%d", &statusCode)
+				if err != nil {
+					log.Printf("Failed to parse response status code: %v", err)
+					return
+				}
 				break
 			}
 		}

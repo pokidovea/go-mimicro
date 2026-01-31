@@ -75,7 +75,7 @@ func (g *ResponseGenerator) generateObject(schema *spec.Schema) map[string]inter
 }
 
 func (g *ResponseGenerator) generateArray(schema *spec.Schema) []interface{} {
-	// Generate array with 1-5 items
+	// Generate an array with 1-5 items
 	count := g.rnd.Intn(5) + 1
 	result := make([]interface{}, count)
 
@@ -133,43 +133,43 @@ func (g *ResponseGenerator) generateString(schema *spec.Schema) string {
 }
 
 func (g *ResponseGenerator) generateInteger(schema *spec.Schema) int {
-	min := 0
-	max := 1000
+	_min := 0
+	_max := 1000
 
 	if schema.Minimum != nil {
-		min = int(*schema.Minimum)
+		_min = int(*schema.Minimum)
 	}
 	if schema.Maximum != nil {
-		max = int(*schema.Maximum)
+		_max = int(*schema.Maximum)
 	}
 
-	if min > max {
-		max = min
+	if _min > _max {
+		_max = _min
 	}
 
-	if max == min {
-		return min
+	if _max == _min {
+		return _min
 	}
 
-	return min + g.rnd.Intn(max-min+1)
+	return _min + g.rnd.Intn(_max-_min+1)
 }
 
 func (g *ResponseGenerator) generateNumber(schema *spec.Schema) float64 {
-	min := 0.0
-	max := 1000.0
+	_min := 0.0
+	_max := 1000.0
 
 	if schema.Minimum != nil {
-		min = *schema.Minimum
+		_min = *schema.Minimum
 	}
 	if schema.Maximum != nil {
-		max = *schema.Maximum
+		_max = *schema.Maximum
 	}
 
-	if min > max {
-		max = min
+	if _min > _max {
+		_max = _min
 	}
 
-	return min + g.rnd.Float64()*(max-min)
+	return _min + g.rnd.Float64()*(_max-_min)
 }
 
 func (g *ResponseGenerator) resolveRef(ref string) *spec.Schema {

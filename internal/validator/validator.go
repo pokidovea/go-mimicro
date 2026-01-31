@@ -175,7 +175,7 @@ func (v *Validator) validateStringParam(value string, schema *spec.Schema, field
 	if schema.Ref != "" {
 		schema = v.resolveRef(schema.Ref)
 		if schema == nil {
-			return nil // Skip validation if ref can't be resolved
+			return nil // Skip validation if a ref can't be resolved
 		}
 	}
 
@@ -215,7 +215,7 @@ func (v *Validator) validateValue(value interface{}, schema *spec.Schema, fieldN
 	if schema.Ref != "" {
 		schema = v.resolveRef(schema.Ref)
 		if schema == nil {
-			return nil // Skip validation if ref can't be resolved
+			return nil // Skip validation if a ref can't be resolved
 		}
 	}
 
