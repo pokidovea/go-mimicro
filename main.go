@@ -5,118 +5,38 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 
-	"github.com/equinox-io/equinox"
-	"github.com/pokidovea/mimicro/management"
-	"github.com/pokidovea/mimicro/mockServer"
+	"mimicro/internal/server"
+	"mimicro/internal/spec"
 )
 
-const appID = "app_cub6zaUSQM5"
-const appVersion = "0.1.1"
-
-var publicKey = []byte(`
------BEGIN ECDSA PUBLIC KEY-----
-MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE+I1EKZgg9I9/jZYUSAafZmGtS2QKx/6m
-qiuY5GqpQR4YnJxMe9vs/xJZiK+pjD+dSJgqbMTHNQlqdDdngxk7ncwJ7lyD6fEb
-CLTkXUVQ2EIDOH6GSBIQZM1sY98lsJ8b
------END ECDSA PUBLIC KEY-----
-`)
-
-func equinoxUpdate() error {
-	var opts equinox.Options
-	if err := opts.SetPublicKeyPEM(publicKey); err != nil {
-		return err
-	}
-
-	// check for the update
-	resp, err := equinox.Check(appID, opts)
-	switch {
-	case err == equinox.NotAvailableErr:
-		fmt.Println("No update available, already at the latest version")
-		return nil
-	case err != nil:
-		fmt.Println("Update failed:", err)
-		return err
-	}
-
-	// fetch the update and apply it
-	err = resp.Apply()
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Updated to new version: %s\n", resp.ReleaseVersion)
-	return nil
-}
-
-func checkConfig(configPath string) error {
-	err := mockServer.CheckConfig(configPath)
-
-	if err == nil {
-		fmt.Println("Config is valid")
-		return nil
-	}
-
-	fmt.Printf("Config is not valid. See errors below: \n %s \n", err.Error())
-	return err
-}
-
 func main() {
+	var specPath string
+	var port int
 
-	configPath := flag.String("config", "", "a path to configuration file")
-	checkConf := flag.Bool("check", false, "validates passed config")
-	managementPort := flag.Int("management-port", 4444, "port for the management server")
-	collectStatistics := flag.Bool(
-		"collect-statistics", false, "pass this flag if you want to collect statistics of requests",
-	)
-	update := flag.Bool("update", false, "check for a new version and update")
-	version := flag.Bool("version", false, "current version")
-
+	flag.StringVar(&specPath, "spec", "", "Path or URL to OpenAPI spec file (yaml/json)")
+	flag.IntVar(&port, "port", 8080, "Port to run the mock server on")
 	flag.Parse()
 
-	if *version {
-		fmt.Println(appVersion)
-		os.Exit(0)
-	}
-
-	if *update {
-		err := equinoxUpdate()
-		if err != nil {
-			log.Printf(err.Error())
-			os.Exit(1)
-		}
-		os.Exit(0)
-	}
-
-	err := checkConfig(*configPath)
-
-	if err != nil {
+	if specPath == "" {
+		fmt.Println("Error: -spec flag is required")
+		flag.Usage()
 		os.Exit(1)
 	}
 
-	if *checkConf == true {
-		os.Exit(0)
-	}
+	log.Printf("Loading OpenAPI spec from: %s", specPath)
 
-	serverCollection, err := mockServer.Load(*configPath)
-
+	loader := spec.NewLoader()
+	apiSpec, err := loader.Load(specPath)
 	if err != nil {
-		log.Printf(err.Error())
-		os.Exit(1)
+		log.Fatalf("Failed to load OpenAPI spec: %v", err)
 	}
 
-	var wg sync.WaitGroup
+	log.Printf("Successfully loaded OpenAPI spec: %s %s", apiSpec.Info.Title, apiSpec.Info.Version)
+	log.Printf("Starting mock server on port %d", port)
 
-	managementServer := management.NewServer(*managementPort, *collectStatistics)
-	wg.Add(1)
-	go managementServer.Serve(&wg)
-
-	for _, server := range serverCollection.Servers {
-		wg.Add(1)
-		go server.Serve(managementServer.WriteRequestLog, &wg)
+	mockServer := server.New(apiSpec, port)
+	if err := mockServer.Start(); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
-
-	wg.Wait()
-	log.Printf("Mimicro successfully down")
 }
