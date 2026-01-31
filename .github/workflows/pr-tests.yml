@@ -1,11 +1,6 @@
 name: Pull Request Tests
 
-on:
-  pull_request:
-    branches:
-      - master
-      - main
-    types: [opened, synchronize, reopened]
+on: [push, pull_request]
 
 jobs:
   test:
@@ -39,6 +34,8 @@ jobs:
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         if: success()
         with:
           file: ./coverage.out
