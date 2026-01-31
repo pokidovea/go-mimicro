@@ -1,0 +1,102 @@
+package server
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+
+	"mimicro/internal/generator"
+	"mimicro/internal/spec"
+)
+
+type Server struct {
+	spec      *spec.OpenAPISpec
+	port      int
+	generator *generator.ResponseGenerator
+}
+
+func New(apiSpec *spec.OpenAPISpec, port int) *Server {
+	return &Server{
+		spec:      apiSpec,
+		port:      port,
+		generator: generator.New(apiSpec),
+	}
+}
+
+func (s *Server) Start() error {
+	mux := http.NewServeMux()
+
+	// Register all paths from OpenAPI spec
+	for path, pathItem := range s.spec.Paths {
+		s.registerPath(mux, path, pathItem)
+	}
+
+	addr := fmt.Sprintf(":%d", s.port)
+	log.Printf("Mock server listening on %s", addr)
+	return http.ListenAndServe(addr, mux)
+}
+
+func (s *Server) registerPath(mux *http.ServeMux, path string, pathItem spec.PathItem) {
+	if pathItem.Get != nil {
+		mux.HandleFunc(fmt.Sprintf("GET %s", path), s.handleRequest(path, "GET", pathItem.Get))
+		log.Printf("Registered: GET %s", path)
+	}
+	if pathItem.Post != nil {
+		mux.HandleFunc(fmt.Sprintf("POST %s", path), s.handleRequest(path, "POST", pathItem.Post))
+		log.Printf("Registered: POST %s", path)
+	}
+	if pathItem.Put != nil {
+		mux.HandleFunc(fmt.Sprintf("PUT %s", path), s.handleRequest(path, "PUT", pathItem.Put))
+		log.Printf("Registered: PUT %s", path)
+	}
+	if pathItem.Delete != nil {
+		mux.HandleFunc(fmt.Sprintf("DELETE %s", path), s.handleRequest(path, "DELETE", pathItem.Delete))
+		log.Printf("Registered: DELETE %s", path)
+	}
+	if pathItem.Patch != nil {
+		mux.HandleFunc(fmt.Sprintf("PATCH %s", path), s.handleRequest(path, "PATCH", pathItem.Patch))
+		log.Printf("Registered: PATCH %s", path)
+	}
+}
+
+func (s *Server) handleRequest(path, method string, operation *spec.Operation) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s from %s", method, path, r.RemoteAddr)
+
+		// Find successful response (200, 201, etc.)
+		var response *spec.Response
+		var statusCode int
+
+		for code, resp := range operation.Responses {
+			if code[0] == '2' { // 2xx success codes
+				response = &resp
+				fmt.Sscanf(code, "%d", &statusCode)
+				break
+			}
+		}
+
+		if response == nil {
+			// No success response defined, return 200 OK with empty response
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Generate response based on content type
+		for contentType, mediaType := range response.Content {
+			if mediaType.Schema != nil {
+				w.Header().Set("Content-Type", contentType)
+				w.WriteHeader(statusCode)
+
+				data := s.generator.Generate(mediaType.Schema)
+				if err := json.NewEncoder(w).Encode(data); err != nil {
+					log.Printf("Error encoding response: %v", err)
+				}
+				return
+			}
+		}
+
+		// No content defined
+		w.WriteHeader(statusCode)
+	}
+}
