@@ -1,5 +1,7 @@
 # Mimicro
 
+[![codecov](https://codecov.io/github/pokidovea/go-mimicro/graph/badge.svg?token=DERg3q4rVa)](https://codecov.io/github/pokidovea/go-mimicro)
+
 Mock HTTP server based on OpenAPI specifications.
 
 ## Description
