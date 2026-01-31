@@ -1,19 +1,23 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
 	"mimicro/internal/generator"
 	"mimicro/internal/spec"
+	"mimicro/internal/validator"
 )
 
 type Server struct {
 	spec      *spec.OpenAPISpec
 	port      int
 	generator *generator.ResponseGenerator
+	validator *validator.Validator
 }
 
 func New(apiSpec *spec.OpenAPISpec, port int) *Server {
@@ -21,6 +25,7 @@ func New(apiSpec *spec.OpenAPISpec, port int) *Server {
 		spec:      apiSpec,
 		port:      port,
 		generator: generator.New(apiSpec),
+		validator: validator.New(apiSpec),
 	}
 }
 
@@ -30,6 +35,9 @@ func (s *Server) Start() error {
 	// Register all paths from OpenAPI spec
 	for path, pathItem := range s.spec.Paths {
 		s.registerPath(mux, path, pathItem)
+
+		// Register a catch-all handler for 405 Method Not Allowed
+		mux.HandleFunc(path, s.handleMethodNotAllowed(path, pathItem))
 	}
 
 	addr := fmt.Sprintf(":%d", s.port)
@@ -60,9 +68,96 @@ func (s *Server) registerPath(mux *http.ServeMux, path string, pathItem spec.Pat
 	}
 }
 
+func (s *Server) handleMethodNotAllowed(path string, pathItem spec.PathItem) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// This handler is only called if no specific method handler matched
+		allowed := s.getAllowedMethods(pathItem)
+		if len(allowed) > 0 {
+			log.Printf("405 Method Not Allowed: %s %s from %s", r.Method, path, r.RemoteAddr)
+			w.Header().Set("Allow", joinMethods(allowed))
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": fmt.Sprintf("Method %s not allowed. Allowed methods: %s", r.Method, joinMethods(allowed)),
+			})
+		}
+	}
+}
+
+func (s *Server) getAllowedMethods(pathItem spec.PathItem) []string {
+	var methods []string
+	if pathItem.Get != nil {
+		methods = append(methods, "GET")
+	}
+	if pathItem.Post != nil {
+		methods = append(methods, "POST")
+	}
+	if pathItem.Put != nil {
+		methods = append(methods, "PUT")
+	}
+	if pathItem.Delete != nil {
+		methods = append(methods, "DELETE")
+	}
+	if pathItem.Patch != nil {
+		methods = append(methods, "PATCH")
+	}
+	return methods
+}
+
+func joinMethods(methods []string) string {
+	result := ""
+	for i, m := range methods {
+		if i > 0 {
+			result += ", "
+		}
+		result += m
+	}
+	return result
+}
+
 func (s *Server) handleRequest(path, method string, operation *spec.Operation) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s %s from %s", method, path, r.RemoteAddr)
+
+		// Validate path parameters
+		if err := s.validator.ValidatePathParameters(r, operation); err != nil {
+			log.Printf("Validation error (path params): %v", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Validate query parameters
+		if err := s.validator.ValidateQueryParameters(r, operation); err != nil {
+			log.Printf("Validation error (query params): %v", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Validate request body
+		// Need to read body and restore it for validation
+		var bodyBytes []byte
+		if r.Body != nil {
+			bodyBytes, _ = io.ReadAll(r.Body)
+			r.Body.Close()
+		}
+		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		if err := s.validator.ValidateRequestBody(r, operation); err != nil {
+			log.Printf("Validation error (request body): %v", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": err.Error(),
+			})
+			return
+		}
 
 		// Find successful response (200, 201, etc.)
 		var response *spec.Response
